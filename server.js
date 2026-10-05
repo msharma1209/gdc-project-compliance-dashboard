@@ -65,7 +65,7 @@ var SOQL = [
   'psa_pm_Project_Category__c, psa_pm_Engagement_Type__c,',
   'psa_tm_Last_Time_Entry_Date__c, PSA_Adoption_Event_Not_Required_Reason__c,',
   'pse_pm_Last_Customer_Survey_Created__c, PSA_Status_report_on_Project__c,',
-  'psa_pm_Project_Sub_Type__c, pse__Practice__r.Name,',
+  'psa_pm_Project_Sub_Type__c, pse__Practice__r.Name, pse__Region__r.Name, pse__Engagement_Manager__r.Name,',
   // Adoption Events sub-query — Status + Due Date for each event on the project
   '(SELECT Id, pse__Status__c, pse__Due_Date__c FROM pse__Adoption_Events__r),',
   // Milestones sub-query — only billable milestones

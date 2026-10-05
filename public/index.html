@@ -478,8 +478,13 @@ function getSortVal(p,col){
   }
 }
 function applySort(list, col, dir) {
-  if(!col) return; var d=dir==='asc'?1:-1;
-  list.sort(function(a,b){ var av=getSortVal(a,col),bv=getSortVal(b,col); if(av==null)return 1; if(bv==null)return -1; return av<bv?-d:av>bv?d:0; });
+  if (!col) return;
+  var d = dir==='asc' ? 1 : -1;
+  list.sort(function(a,b){
+    var av=getSortVal(a,col), bv=getSortVal(b,col);
+    if(av==null) return 1; if(bv==null) return -1;
+    return av<bv ? -d : av>bv ? d : 0;
+  });
 }
 
 /* ── ROW ALERT ── */
@@ -493,8 +498,9 @@ function rowAlertClass(p){
   return '';
 }
 
-/* ── BUILD TABLE ROW (shared) ── */
-var COLUMNS = [
+/* ── COLUMNS ── */
+// Main dashboard table columns
+var MAIN_COLUMNS = [
   {key:'name',      label:'Project Name',  sortable:true },
   {key:'account',   label:'Account',       sortable:true },
   {key:'dm',        label:'Delivery Mgr',  sortable:true },
@@ -510,7 +516,43 @@ var COLUMNS = [
   {key:'portfolio', label:'Portfolio Mgr', sortable:true }
 ];
 
-function buildRow(p) {
+// Detail / KPI drill-down page columns
+var DETAIL_COLUMNS = [
+  {key:'name',      label:'Project Name',         sortable:true },
+  {key:'region',    label:'Region',               sortable:true },
+  {key:'pm',        label:'Project Manager',      sortable:true },
+  {key:'dm',        label:'Delivery Manager',     sortable:true },
+  {key:'status',    label:'Status',               sortable:true },
+  {key:'timecard',  label:'Last Timecard Entry',  sortable:true },
+  {key:'subtype',   label:'Sub-Type',             sortable:true },
+  {key:'margin',    label:'Margin %',             sortable:true }
+];
+
+/* ── SORT VALUE ── */
+function getSortVal(p, col) {
+  switch(col) {
+    case 'name':      return (p.Name||'').toLowerCase();
+    case 'account':   return ((p.pse__Account__r&&p.pse__Account__r.Name)||'').toLowerCase();
+    case 'region':    return ((p.pse__Region__r&&p.pse__Region__r.Name)||'').toLowerCase();
+    case 'pm':        return ((p.pse__Engagement_Manager__r&&p.pse__Engagement_Manager__r.Name)||'').toLowerCase();
+    case 'dm':        return ((p.pse__Project_Manager__r&&p.pse__Project_Manager__r.Name)||'').toLowerCase();
+    case 'status':    return p.pse__Project_Status__c||'';
+    case 'timecard':  return p.psa_tm_Last_Time_Entry_Date__c||'';
+    case 'subtype':   return p.psa_pm_Project_Sub_Type__c||'';
+    case 'margin':    return p.psa_pm_PercentComplete__c!=null?p.psa_pm_PercentComplete__c:-1;
+    case 'pct':       return p.psa_pm_PercentComplete__c!=null?p.psa_pm_PercentComplete__c:-1;
+    case 'enddate':   return p.pse__End_Date__c||'';
+    case 'financial': return p.pse__Financial_Status__c||'';
+    case 'schedule':  return p.pse__Schedule_Status__c||'';
+    case 'resources': return p.PSA_PM_Resources__c||'';
+    case 'hrsleft':   return p.PSA_PM_Total_Billable_Hours_Remaining__c!=null?p.PSA_PM_Total_Billable_Hours_Remaining__c:-99999;
+    case 'portfolio': return ((p.psa_pm_Portfolio_Manager__r&&p.psa_pm_Portfolio_Manager__r.Name)||'').toLowerCase();
+    default: return '';
+  }
+}
+
+/* ── BUILD MAIN ROW (dashboard table) ── */
+function buildMainRow(p) {
   var tr=document.createElement('tr'); tr.setAttribute('data-id',p.Id);
   var ac=rowAlertClass(p); if(ac) tr.classList.add(ac);
 
@@ -603,9 +645,80 @@ function buildRow(p) {
   return tr;
 }
 
-function buildTableHeader(trEl, sortCol, sortDir, onSort) {
+/* ── BUILD DETAIL ROW (KPI drill-down, 8 columns) ── */
+function buildDetailRow(p) {
+  var tr=document.createElement('tr'); tr.setAttribute('data-id',p.Id);
+
+  // Project Name (link)
+  var tdN=document.createElement('td'); tdN.style.maxWidth='280px';
+  var lnk=document.createElement('a');
+  lnk.href=SF_INSTANCE+'/lightning/r/pse__Proj__c/'+p.Id+'/view';
+  lnk.target='_blank'; lnk.rel='noopener noreferrer';
+  var nm=p.Name||'—'; lnk.textContent=nm.length>50?nm.slice(0,48)+'…':nm; lnk.title=nm;
+  tdN.appendChild(lnk); tr.appendChild(tdN);
+
+  // Region
+  var tdReg=document.createElement('td');
+  var regN=(p.pse__Region__r&&p.pse__Region__r.Name)?p.pse__Region__r.Name:'—';
+  var regS=document.createElement('span'); regS.textContent=regN;
+  if(regN==='—') regS.style.color='var(--muted)';
+  tdReg.appendChild(regS); tr.appendChild(tdReg);
+
+  // Project Manager (Engagement Manager)
+  var tdPM=document.createElement('td');
+  var pmN=(p.pse__Engagement_Manager__r&&p.pse__Engagement_Manager__r.Name)?p.pse__Engagement_Manager__r.Name:'—';
+  var pmS=document.createElement('span'); pmS.textContent=pmN;
+  if(pmN==='—') pmS.style.color='var(--muted)';
+  tdPM.appendChild(pmS); tr.appendChild(tdPM);
+
+  // Delivery Manager (full name, colour dot)
+  var tdDM=document.createElement('td');
+  var chip=document.createElement('div'); chip.className='dm-chip';
+  var dmInf=DM_MAP[p.pse__Project_Manager__c];
+  var dot=document.createElement('span'); dot.className='dm-dot'; dot.style.background=dmInf?dmInf.color:'#8892aa';
+  var dmFull=(p.pse__Project_Manager__r&&p.pse__Project_Manager__r.Name)?p.pse__Project_Manager__r.Name:'—';
+  var dmTxt=document.createElement('span'); dmTxt.textContent=dmFull;
+  chip.appendChild(dot); chip.appendChild(dmTxt); tdDM.appendChild(chip); tr.appendChild(tdDM);
+
+  // Status
+  var tdS=document.createElement('td'); tdS.appendChild(makePill(p.pse__Project_Status__c)); tr.appendChild(tdS);
+
+  // Last Timecard Entry
+  var tdTC=document.createElement('td');
+  var tcS=document.createElement('span');
+  tcS.textContent=fmtDate(p.psa_tm_Last_Time_Entry_Date__c);
+  if(!p.psa_tm_Last_Time_Entry_Date__c) { tcS.style.color='#ef4444'; tcS.textContent='Never'; }
+  else {
+    var d=parseDate(p.psa_tm_Last_Time_Entry_Date__c);
+    if(d && daysDiff(TODAY,d)>30) tcS.style.color='#ef4444';
+    else tcS.style.color='var(--muted)';
+  }
+  tdTC.appendChild(tcS); tr.appendChild(tdTC);
+
+  // Sub-Type
+  var tdSt=document.createElement('td');
+  var stS=document.createElement('span'); stS.textContent=p.psa_pm_Project_Sub_Type__c||'—';
+  if(!p.psa_pm_Project_Sub_Type__c) stS.style.color='var(--muted)';
+  tdSt.appendChild(stS); tr.appendChild(tdSt);
+
+  // Margin %
+  var tdM=document.createElement('td');
+  var mS=document.createElement('span');
+  var mVal=p.psa_pm_PercentComplete__c;
+  if(mVal!=null){
+    mS.textContent=mVal+'%';
+    mS.style.color = mVal<50?'#ef4444':mVal<75?'#f59e0b':'#22c55e';
+    mS.style.fontWeight='600';
+  } else { mS.textContent='—'; mS.style.color='var(--muted)'; }
+  tdM.appendChild(mS); tr.appendChild(tdM);
+
+  return tr;
+}
+
+/* ── GENERIC TABLE HEADER BUILDER ── */
+function buildTableHeader(trEl, columns, sortCol, sortDir, onSort) {
   clearEl(trEl);
-  COLUMNS.forEach(function(col){
+  columns.forEach(function(col){
     var th=document.createElement('th');
     if(col.sortable){
       th.setAttribute('data-col',col.key);
@@ -622,14 +735,15 @@ function buildTableHeader(trEl, sortCol, sortDir, onSort) {
   });
 }
 
-function buildTableBody(tbodyEl, rows, emptyMsg) {
+/* ── GENERIC TABLE BODY BUILDER ── */
+function buildTableBody(tbodyEl, rows, columns, rowBuilder, emptyMsg) {
   clearEl(tbodyEl);
   if(rows.length===0){
     var etr=document.createElement('tr'); etr.className='empty-row';
-    var etd=document.createElement('td'); etd.colSpan=COLUMNS.length; etd.textContent=emptyMsg||'No projects found.';
+    var etd=document.createElement('td'); etd.colSpan=columns.length; etd.textContent=emptyMsg||'No projects found.';
     etr.appendChild(etd); tbodyEl.appendChild(etr); return;
   }
-  rows.forEach(function(p){ tbodyEl.appendChild(buildRow(p)); });
+  rows.forEach(function(p){ tbodyEl.appendChild(rowBuilder(p)); });
 }
 
 /* ══════════════════════════════════════════════════
@@ -652,7 +766,7 @@ function showDetailView(kpi) {
   document.getElementById('detail-row-count').textContent = state.detail.projects.length + ' project' + (state.detail.projects.length!==1?'s':'');
 
   renderDetailHeader();
-  buildTableBody(document.getElementById('detail-body'), state.detail.displayed, 'No projects in this category.');
+  buildTableBody(document.getElementById('detail-body'), state.detail.displayed, DETAIL_COLUMNS, buildDetailRow, 'No projects in this category.');
 
   // Show/hide sections
   document.getElementById('main-view').style.display    = 'none';
@@ -664,6 +778,7 @@ function showDetailView(kpi) {
 function renderDetailHeader() {
   buildTableHeader(
     document.getElementById('detail-head'),
+    DETAIL_COLUMNS,
     state.detail.sortCol,
     state.detail.sortDir,
     function(col){
@@ -672,7 +787,7 @@ function renderDetailHeader() {
       applyDetailSearch();
       applySort(state.detail.displayed, state.detail.sortCol, state.detail.sortDir);
       renderDetailHeader();
-      buildTableBody(document.getElementById('detail-body'), state.detail.displayed, 'No projects in this category.');
+      buildTableBody(document.getElementById('detail-body'), state.detail.displayed, DETAIL_COLUMNS, buildDetailRow, 'No projects in this category.');
       document.getElementById('detail-row-count').textContent = state.detail.displayed.length + ' project' + (state.detail.displayed.length!==1?'s':'');
     }
   );
@@ -767,20 +882,20 @@ function renderCompleteChart(){
 
 function renderMainTableHeader(){
   buildTableHeader(
-    document.getElementById('table-head'), state.sortCol, state.sortDir,
+    document.getElementById('table-head'), MAIN_COLUMNS, state.sortCol, state.sortDir,
     function(col){
       state.sortDir=(state.sortCol===col&&state.sortDir==='asc')?'desc':'asc';
       state.sortCol=col;
       applySearchFilter(); applySort(state.displayed, state.sortCol, state.sortDir);
       renderMainTableHeader();
-      buildTableBody(document.getElementById('table-body'), state.displayed, 'No projects match the current filters.');
+      buildTableBody(document.getElementById('table-body'), state.displayed, MAIN_COLUMNS, buildMainRow, 'No projects match the current filters.');
       document.getElementById('row-count').textContent=state.displayed.length+' project'+(state.displayed.length!==1?'s':'');
     }
   );
 }
 
 function renderMainTableBody(){
-  buildTableBody(document.getElementById('table-body'), state.displayed, 'No projects match the current filters.');
+  buildTableBody(document.getElementById('table-body'), state.displayed, MAIN_COLUMNS, buildMainRow, 'No projects match the current filters.');
   document.getElementById('row-count').textContent=state.displayed.length+' project'+(state.displayed.length!==1?'s':'');
 }
 
@@ -830,7 +945,7 @@ function init(){
     state.detail.searchQuery=e.target.value;
     applyDetailSearch();
     applySort(state.detail.displayed, state.detail.sortCol, state.detail.sortDir);
-    buildTableBody(document.getElementById('detail-body'), state.detail.displayed, 'No projects in this category.');
+    buildTableBody(document.getElementById('detail-body'), state.detail.displayed, DETAIL_COLUMNS, buildDetailRow, 'No projects in this category.');
     document.getElementById('detail-row-count').textContent=state.detail.displayed.length+' project'+(state.detail.displayed.length!==1?'s':'');
   });
 
