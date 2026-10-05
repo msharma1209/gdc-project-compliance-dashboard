@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: gdc-compliance-dashboard
+    runtime: node
+    buildCommand: ""        # no npm install needed — no dependencies
+    startCommand: node server.js
+    plan: free
+    envVars:
+      - key: SF_INSTANCE
+        value: https://infa.my.salesforce.com
+      - key: SF_TOKEN
+        sync: false         # set this manually in Render dashboard (keep secret)

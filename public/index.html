@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Informatica Practice - GDC Project Compliance Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:       #0f1117;
+    --surface:  #1a1d27;
+    --surface2: #22263a;
+    --border:   #2e3150;
+    --text:     #e2e8f0;
+    --muted:    #8892aa;
+    --green:    #22c55e;
+    --yellow:   #f59e0b;
+    --red:      #ef4444;
+    --blue:     #3b82f6;
+    --radius:   10px;
+  }
+  html { font-size: 14px; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    line-height: 1.5;
+  }
+  a { color: #7ca4f4; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  #app-header {
+    position: sticky; top: 0; z-index: 100;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    min-height: 56px;
+  }
+  #app-header h1 { font-size: 1.15rem; font-weight: 700; white-space: nowrap; letter-spacing: -0.2px; }
+  .header-dms { display: flex; gap: 8px; flex-wrap: wrap; flex: 1; }
+  .header-dm-chip { display: flex; align-items: center; gap: 5px; font-size: 0.78rem; color: var(--muted); white-space: nowrap; }
+  .dm-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
+  .header-actions { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+  #refresh-btn {
+    background: var(--border); color: var(--text); border: 1px solid var(--border);
+    border-radius: 6px; padding: 5px 14px; font-size: 0.82rem; cursor: pointer;
+    transition: background 0.15s; display: flex; align-items: center; gap: 5px;
+  }
+  #refresh-btn:hover { background: #3b4168; }
+  #refresh-btn.loading { opacity: 0.6; cursor: not-allowed; }
+  #last-refresh { font-size: 0.75rem; color: var(--muted); white-space: nowrap; }
+  #data-source-badge { font-size: 0.7rem; padding: 2px 8px; border-radius: 20px; font-weight: 600; }
+  .badge-live    { background: rgba(34,197,94,0.15);  color: var(--green);  border: 1px solid rgba(34,197,94,0.3); }
+  .badge-bundled { background: rgba(245,158,11,0.15); color: var(--yellow); border: 1px solid rgba(245,158,11,0.3); }
+  #dm-filter-bar {
+    display: flex; gap: 8px; padding: 12px 24px;
+    background: var(--bg); border-bottom: 1px solid var(--border);
+    flex-wrap: wrap; align-items: center;
+  }
+  .dm-filter-btn {
+    display: flex; align-items: center; gap: 6px; padding: 6px 14px;
+    border-radius: 20px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--muted); font-size: 0.8rem;
+    cursor: pointer; transition: all 0.15s; font-weight: 500; font-family: inherit;
+  }
+  .dm-filter-btn:hover { border-color: #5b6cf9; color: var(--text); }
+  .dm-filter-btn.active { color: var(--text); background: var(--surface2); }
+  .dm-filter-btn[data-dm="all"].active { border-color: #5b6cf9; color: #a5b4fc; background: rgba(91,108,249,0.1); }
+  #main { max-width: 1600px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; gap: 28px; }
+  .section-header { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 12px; }
+  #kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(175px, 1fr)); gap: 12px; }
+  .kpi-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 16px; cursor: pointer; transition: transform 0.12s, box-shadow 0.12s, border-color 0.15s;
+    position: relative; overflow: hidden;
+  }
+  .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; border-radius: var(--radius) var(--radius) 0 0; }
+  .kpi-card.border-green::before  { background: var(--green); }
+  .kpi-card.border-red::before    { background: var(--red); }
+  .kpi-card.border-yellow::before { background: var(--yellow); }
+  .kpi-card.border-blue::before   { background: var(--blue); }
+  .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.4); }
+  .kpi-card.selected { box-shadow: 0 0 0 2px #f59e0b, 0 6px 20px rgba(0,0,0,0.4); }
+  .kpi-icon  { font-size: 1.4rem; margin-bottom: 8px; display: block; line-height: 1; }
+  .kpi-label { font-size: 0.72rem; color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; line-height: 1.3; }
+  .kpi-value { font-size: 2rem; font-weight: 700; line-height: 1; color: var(--text); }
+  .kpi-note  { font-size: 0.68rem; color: var(--muted); margin-top: 4px; }
+  #charts-row { display: grid; grid-template-columns: 1fr 2fr 2fr; gap: 16px; }
+  .chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
+  .chart-title { font-size: 0.78rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 14px; }
+  .chart-wrap { position: relative; width: 100%; }
+  #chart-doughnut-wrap { height: 200px; display: flex; align-items: center; justify-content: center; }
+  #chart-health-wrap   { height: 220px; }
+  #chart-complete-wrap { height: 220px; }
+  #table-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+  #search-box {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+    padding: 7px 12px 7px 32px; color: var(--text); font-size: 0.82rem; width: 280px;
+    outline: none; transition: border-color 0.15s;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238892aa' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: 10px center; font-family: inherit;
+  }
+  #search-box:focus { border-color: #5b6cf9; }
+  #row-count { font-size: 0.78rem; color: var(--muted); margin-left: auto; }
+  .table-wrap { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; min-width: 1100px; }
+  thead tr { background: var(--surface2); border-bottom: 1px solid var(--border); }
+  th { padding: 10px 12px; text-align: left; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); white-space: nowrap; cursor: pointer; user-select: none; transition: color 0.15s; }
+  th:hover { color: var(--text); }
+  th .sort-icon { margin-left: 4px; opacity: 0.4; font-style: normal; font-size: 0.7rem; }
+  th.sort-asc .sort-icon, th.sort-desc .sort-icon { opacity: 1; color: #7ca4f4; }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--surface2); }
+  td { padding: 10px 12px; font-size: 0.8rem; vertical-align: middle; }
+  tr.row-alert-red    { outline: 2px solid rgba(239,68,68,0.55);  outline-offset: -2px; }
+  tr.row-alert-yellow { outline: 2px solid rgba(245,158,11,0.45); outline-offset: -2px; }
+  tr.kpi-highlight    { outline: 2px solid #f59e0b !important; outline-offset: -2px; background: rgba(245,158,11,0.06) !important; }
+  .status-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; white-space: nowrap; }
+  .pill-green  { background: rgba(34,197,94,0.15);   color: #4ade80; }
+  .pill-yellow { background: rgba(245,158,11,0.15);  color: #fbbf24; }
+  .pill-red    { background: rgba(239,68,68,0.15);   color: #f87171; }
+  .pill-gray   { background: rgba(136,146,170,0.15); color: var(--muted); }
+  .prog-wrap { display: flex; align-items: center; gap: 6px; }
+  .prog-bar-outer { flex: 1; min-width: 60px; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .prog-bar-inner { height: 100%; border-radius: 3px; transition: width 0.3s; }
+  .prog-label { font-size: 0.72rem; color: var(--muted); white-space: nowrap; min-width: 34px; text-align: right; }
+  .timeline-wrap { display: flex; flex-direction: column; gap: 2px; min-width: 90px; }
+  .timeline-bar-outer { width: 100%; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .timeline-bar-inner { height: 100%; border-radius: 2px; }
+  .timeline-dates { display: flex; justify-content: space-between; font-size: 0.62rem; color: var(--muted); }
+  .at-risk { color: var(--red); font-weight: 700; font-size: 0.72rem; }
+  .dm-chip { display: flex; align-items: center; gap: 5px; white-space: nowrap; font-size: 0.78rem; }
+  .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid rgba(255,255,255,0.2); border-top-color: var(--text); border-radius: 50%; animation: spin 0.6s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .empty-row td { text-align: center; padding: 32px; color: var(--muted); font-size: 0.85rem; }
+  @media (max-width: 1100px) { #charts-row { grid-template-columns: 1fr 1fr; } #charts-row .chart-card:first-child { grid-column: span 2; } #chart-doughnut-wrap { height: 160px; } }
+  @media (max-width: 700px) { #charts-row { grid-template-columns: 1fr; } #charts-row .chart-card:first-child { grid-column: span 1; } #main { padding: 12px; } #app-header, #dm-filter-bar { padding-left: 12px; padding-right: 12px; } }
+</style>
+</head>
+<body>
+
+<header id="app-header">
+  <h1>&#128202; Informatica Practice &ndash; GDC Project Compliance Dashboard</h1>
+  <div class="header-dms" id="header-dms"></div>
+  <div class="header-actions">
+    <span id="data-source-badge" class="badge-bundled">BUNDLED</span>
+    <span id="last-refresh"></span>
+    <button id="refresh-btn">&#8635; Refresh</button>
+  </div>
+</header>
+
+<div id="dm-filter-bar">
+  <button class="dm-filter-btn active" data-dm="all">
+    <span class="dm-dot" style="background:#5b6cf9;"></span>
+    All DMs
+  </button>
+</div>
+
+<div id="main">
+  <section id="kpi-section">
+    <div class="section-header">Key Performance Indicators</div>
+    <div id="kpi-grid"></div>
+  </section>
+  <section id="charts-section">
+    <div class="section-header">Analytics</div>
+    <div id="charts-row">
+      <div class="chart-card">
+        <div class="chart-title">Overall Status Trend</div>
+        <div class="chart-wrap" id="chart-doughnut-wrap"><canvas id="chart-doughnut"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Health Indicators</div>
+        <div class="chart-wrap" id="chart-health-wrap"><canvas id="chart-health"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">% Complete Distribution</div>
+        <div class="chart-wrap" id="chart-complete-wrap"><canvas id="chart-complete"></canvas></div>
+      </div>
+    </div>
+  </section>
+  <section id="table-section">
+    <div class="section-header">Project Details</div>
+    <div id="table-controls">
+      <input id="search-box" type="text" placeholder="Search project, account, DM..." autocomplete="off">
+      <span id="row-count"></span>
+    </div>
+    <div class="table-wrap">
+      <table id="project-table">
+        <thead><tr id="table-head"></tr></thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<script>
+/* ── helpers ── */
+function clearEl(el) { while (el.firstChild) el.removeChild(el.firstChild); }
+
+/* ── CONSTANTS ── */
+var TODAY        = new Date();
+var SF_INSTANCE  = 'https://infa.my.salesforce.com';
+
+var DELIVERY_MANAGERS = [
+  { id: '003VM00000JsZylYAF', name: 'Megha Sharma',       color: '#5b6cf9' },
+  { id: '0033f00000Cd4ZVAAZ', name: 'Hanumanth Kulkarni', color: '#8b5cf6' },
+  { id: '003VM00000V6fl2YAB', name: 'Aparna Kochukuttan', color: '#06b6d4' },
+  { id: '0033f000006Jdm4AAC', name: 'Suman Viswanathan',  color: '#f59e0b' },
+  { id: '0036S00005dvoulQAA', name: 'Upasana Barbaruah',  color: '#10b981' }
+];
+var DM_MAP = {};
+DELIVERY_MANAGERS.forEach(function(dm) { DM_MAP[dm.id] = dm; });
+
+/* ── BUNDLED DATA ── */
+var BUNDLED_DATA = [
+  {Id:'a9xVM0000001OBZYA2',Name:'PR-016623 CDW Corporation 00077739 2024 Renew-Project',pse__Stage__c:'In Progress',pse__Project_Status__c:'Green',pse__Start_Date__c:'2024-11-10',pse__End_Date__c:'2027-06-30',psa_pm_PercentComplete__c:71.5,pse__Planned_Hours__c:4352,pse__Scheduled_Hours_Remaining__c:1144,PSA_PM_Total_Billable_Hours_Remaining__c:-20,pse__Financial_Status__c:'Yellow',pse__Schedule_Status__c:'Green',pse__Scope_Status__c:'Green',pse__Account__r:{Name:'CDW LLC'},psa_pm_At_Risk__c:false,PSA_PM_Resources__c:'Green',pse__Project_Manager__c:'003VM00000V6fl2YAB',pse__Project_Manager__r:{Name:'Aparna Kochukuttan'},psa_pm_Portfolio_Manager__r:{Name:'Rama Pishati'},psa_Overall_Project_Status_Trend__c:'Green',PSA_PM_Last_Project_Status_Report_Week__c:null,pse__Billable_External_Hours__c:0,psa_pm_Project_Category__c:null,psa_pm_Engagement_Type__c:null,psa_tm_Last_Time_Entry_Date__c:null,PSA_Adoption_Event_Not_Required_Reason__c:null,pse_pm_Last_Customer_Survey_Created__c:null,PSA_Status_report_on_Project__c:false,psa_pm_Project_Sub_Type__c:'Managed Services'},
+  {Id:'a9xVM000000F2kfYAC',Name:'PR-018657 PVH Europe B.V. PS 00093338 2025 Renew-Project',pse__Stage__c:'In Progress',pse__Project_Status__c:'Yellow',pse__Start_Date__c:'2025-12-01',pse__End_Date__c:'2026-11-30',psa_pm_PercentComplete__c:83.3,pse__Planned_Hours__c:2228,pse__Scheduled_Hours_Remaining__c:391,PSA_PM_Total_Billable_Hours_Remaining__c:175,pse__Financial_Status__c:'Yellow',pse__Schedule_Status__c:'Green',pse__Scope_Status__c:'Green',pse__Account__r:{Name:'PVH Europe B.V.'},psa_pm_At_Risk__c:false,PSA_PM_Resources__c:'Green',pse__Project_Manager__c:'003VM00000V6fl2YAB',pse__Project_Manager__r:{Name:'Aparna Kochukuttan'},psa_pm_Portfolio_Manager__r:{Name:'Roger Hoekema'},psa_Overall_Project_Status_Trend__c:'Green',PSA_PM_Last_Project_Status_Report_Week__c:null,pse__Billable_External_Hours__c:0,psa_pm_Project_Category__c:null,psa_pm_Engagement_Type__c:null,psa_tm_Last_Time_Entry_Date__c:null,PSA_Adoption_Event_Not_Required_Reason__c:null,pse_pm_Last_Customer_Survey_Created__c:null,PSA_Status_report_on_Project__c:false,psa_pm_Project_Sub_Type__c:'Managed Services'},
+  {Id:'a9xVM000000GsqrYAC',Name:'PR-018934 GSIS PS IDMC Consulting-Project',pse__Stage__c:'In Progress',pse__Project_Status__c:'Yellow',pse__Start_Date__c:'2026-01-19',pse__End_Date__c:'2026-12-31',psa_pm_PercentComplete__c:58.1,pse__Planned_Hours__c:1120,pse__Scheduled_Hours_Remaining__c:210,PSA_PM_Total_Billable_Hours_Remaining__c:521,pse__Financial_Status__c:'Green',pse__Schedule_Status__c:'Green',pse__Scope_Status__c:'Green',pse__Account__r:{Name:'Government Service Insurance System'},psa_pm_At_Risk__c:false,PSA_PM_Resources__c:'Green',pse__Project_Manager__c:'0033f00000Cd4ZVAAZ',pse__Project_Manager__r:{Name:'Hanumanth Kulkarni'},psa_pm_Portfolio_Manager__r:{Name:'Abhinav Ray'},psa_Overall_Project_Status_Trend__c:'Yellow',PSA_PM_Last_Project_Status_Report_Week__c:null,pse__Billable_External_Hours__c:0,psa_pm_Project_Category__c:null,psa_pm_Engagement_Type__c:null,psa_tm_Last_Time_Entry_Date__c:'2026-09-15',PSA_Adoption_Event_Not_Required_Reason__c:null,pse_pm_Last_Customer_Survey_Created__c:null,PSA_Status_report_on_Project__c:false,psa_pm_Project_Sub_Type__c:'Consulting'},
+  {Id:'a9xVM0000009FvtYAE',Name:'PR-017836 CIMB Bank Berhad PS MDM Upgrade Consulting-Project',pse__Stage__c:'In Progress',pse__Project_Status__c:'Green',pse__Start_Date__c:'2025-11-24',pse__End_Date__c:'2027-02-26',psa_pm_PercentComplete__c:65,pse__Planned_Hours__c:840,pse__Scheduled_Hours_Remaining__c:0,PSA_PM_Total_Billable_Hours_Remaining__c:299,pse__Financial_Status__c:'Green',pse__Schedule_Status__c:'Green',pse__Scope_Status__c:'Green',pse__Account__r:{Name:'CIMB Bank Berhad'},psa_pm_At_Risk__c:false,PSA_PM_Resources__c:'Green',pse__Project_Manager__c:'0033f00000Cd4ZVAAZ',pse__Project_Manager__r:{Name:'Hanumanth Kulkarni'},psa_pm_Portfolio_Manager__r:{Name:'Abhinav Ray'},psa_Overall_Project_Status_Trend__c:'Green',PSA_PM_Last_Project_Status_Report_Week__c:'2026-09-21',pse__Billable_External_Hours__c:0,psa_pm_Project_Category__c:null,psa_pm_Engagement_Type__c:null,psa_tm_Last_Time_Entry_Date__c:'2026-09-20',PSA_Adoption_Event_Not_Required_Reason__c:null,pse_pm_Last_Customer_Survey_Created__c:'2026-08-01',PSA_Status_report_on_Project__c:true,psa_pm_Project_Sub_Type__c:'Consulting'},
+  {Id:'a9xVM000000LWZZYA4',Name:'PR-019316 RS Components PS Managed Service - interim extension',pse__Stage__c:'In Progress',pse__Project_Status__c:'Green',pse__Start_Date__c:'2026-07-01',pse__End_Date__c:'2026-09-30',psa_pm_PercentComplete__c:100,pse__Planned_Hours__c:400,pse__Scheduled_Hours_Remaining__c:0,PSA_PM_Total_Billable_Hours_Remaining__c:114,pse__Financial_Status__c:'Green',pse__Schedule_Status__c:'Green',pse__Scope_Status__c:'Green',pse__Account__r:{Name:'RS Components Limited'},psa_pm_At_Risk__c:false,PSA_PM_Resources__c:'Green',pse__Project_Manager__c:'0033f00000Cd4ZVAAZ',pse__Project_Manager__r:{Name:'Hanumanth Kulkarni'},psa_pm_Portfolio_Manager__r:{Name:'Colm Mccaffery'},psa_Overall_Project_Status_Trend__c:'Green',PSA_PM_Last_Project_Status_Report_Week__c:null,pse__Billable_External_Hours__c:0,psa_pm_Project_Category__c:null,psa_pm_Engagement_Type__c:null,psa_tm_Last_Time_Entry_Date__c:'2026-09-28',PSA_Adoption_Event_Not_Required_Reason__c:null,pse_pm_Last_Customer_Survey_Created__c:null,PSA_Status_report_on_Project__c:false,psa_pm_Project_Sub_Type__c:'Managed Services'},
+  {Id:'a9xVM000000PWxZYAW',Name:'PR-019581 OzForex Limited PS CDGC MVP',pse__Stage__c:'In Progress',pse__Project_Status__c:'Green',pse__Start_Date__c:'2026-07-06',pse__End_Date__c:'2026-11-14',psa_pm_PercentComplete__c:null,pse__Planned_Hours__c:0,pse__Scheduled_Hours_Remaining__c:58,PSA_PM_Total_Billable_Hours_Remaining__c:-65,pse__Financial_Status__c:'Green',pse__Schedule_Status__c:'Green',pse__Scope_Status__c:'Green',pse__Account__r:{Name:'OzForex Limited'},psa_pm_At_Risk__c:false,PSA_PM_Resources__c:'Green',pse__Project_Manager__c:'0033f00000Cd4ZVAAZ',pse__Project_Manager__r:{Name:'Hanumanth Kulkarni'},psa_pm_Portfolio_Manager__r:{Name:'Nenad Jovanovic'},psa_Overall_Project_Status_Trend__c:'Green',PSA_PM_Last_Project_Status_Report_Week__c:null,pse__Billable_External_Hours__c:0,psa_pm_Project_Category__c:null,psa_pm_Engagement_Type__c:null,psa_tm_Last_Time_Entry_Date__c:null,PSA_Adoption_Event_Not_Required_Reason__c:null,pse_pm_Last_Customer_Survey_Created__c:null,PSA_Status_report_on_Project__c:false,psa_pm_Project_Sub_Type__c:null},
+  {Id:'a9xVM000000H0GXYA0',Name:'PR-018941 Axis Bank Limited 00094359 2026 Renew IPS ONLY-MS-Multi Delivery',pse__Stage__c:'In Progress',pse__Project_Status__c:'Green',pse__Start_Date__c:'2026-01-16',pse__End_Date__c:'2029-01-15',psa_pm_PercentComplete__c:12.7,pse__Planned_Hours__c:7758,pse__Scheduled_Hours_Remaining__c:2974,PSA_PM_Total_Billable_Hours_Remaining__c:-760,pse__Financial_Status__c:'Yellow',pse__Schedule_Status__c:'Green',pse__Scope_Status__c:'Green',pse__Account__r:{Name:'Axis Bank Limited'},psa_pm_At_Risk__c:false,PSA_PM_Resources__c:'Green',pse__Project_Manager__c:'003VM00000JsZylYAF',pse__Project_Manager__r:{Name:'Megha Sharma'},psa_pm_Portfolio_Manager__r:{Name:'Ajay Parashar'},psa_Overall_Project_Status_Trend__c:'Green',PSA_PM_Last_Project_Status_Report_Week__c:null,pse__Billable_External_Hours__c:0,psa_pm_Project_Category__c:null,psa_pm_Engagement_Type__c:null,psa_tm_Last_Time_Entry_Date__c:'2026-09-10',PSA_Adoption_Event_Not_Required_Reason__c:null,pse_pm_Last_Customer_Survey_Created__c:null,PSA_Status_report_on_Project__c:false,psa_pm_Project_Sub_Type__c:'Managed Services'},
+  {Id:'a9xVM000000L117YAC',Name:'PR-019284 Axis Bank Limited 00094359 2026 Renew IPS ONLY-T&M-Multi Delivery',pse__Stage__c:'In Progress',pse__Project_Status__c:'Green',pse__Start_Date__c:'2026-01-15',pse__End_Date__c:'2029-01-15',psa_pm_PercentComplete__c:75.7,pse__Planned_Hours__c:2080,pse__Scheduled_Hours_Remaining__c:390,PSA_PM_Total_Billable_Hours_Remaining__c:505,pse__Financial_Status__c:'Green',pse__Schedule_Status__c:'Green',pse__Scope_Status__c:'Green',pse__Account__r:{Name:'Axis Bank Limited'},psa_pm_At_Risk__c:false,PSA_PM_Resources__c:'Yellow',pse__Project_Manager__c:'003VM00000JsZylYAF',pse__Project_Manager__r:{Name:'Megha Sharma'},psa_pm_Portfolio_Manager__r:{Name:'Ajay Parashar'},psa_Overall_Project_Status_Trend__c:'Green',PSA_PM_Last_Project_Status_Report_Week__c:null,pse__Billable_External_Hours__c:0,psa_pm_Project_Category__c:null,psa_pm_Engagement_Type__c:null,psa_tm_Last_Time_Entry_Date__c:null,PSA_Adoption_Event_Not_Required_Reason__c:null,pse_pm_Last_Customer_Survey_Created__c:null,PSA_Status_report_on_Project__c:false,psa_pm_Project_Sub_Type__c:'Managed Services'},
+  {Id:'a9xVM000000DUY9YAO',Name:'PR-018467 ABB Information Limited PS P360 MS 8x5 Silver 2026-Project',pse__Stage__c:'In Progress',pse__Project_Status__c:'Green',pse__Start_Date__c:'2025-12-01',pse__End_Date__c:'2026-12-31',psa_pm_PercentComplete__c:83.3,pse__Planned_Hours__c:1632,pse__Scheduled_Hours_Remaining__c:499,PSA_PM_Total_Billable_Hours_Remaining__c:-307,pse__Financial_Status__c:'Green',pse__Schedule_Status__c:'Green',pse__Scope_Status__c:'Green',pse__Account__r:{Name:'ABB Information Systems Limited'},psa_pm_At_Risk__c:false,PSA_PM_Resources__c:'Green',pse__Project_Manager__c:'003VM00000JsZylYAF',pse__Project_Manager__r:{Name:'Megha Sharma'},psa_pm_Portfolio_Manager__r:{Name:'Christoph Peinert'},psa_Overall_Project_Status_Trend__c:'Green',PSA_PM_Last_Project_Status_Report_Week__c:null,pse__Billable_External_Hours__c:0,psa_pm_Project_Category__c:null,psa_pm_Engagement_Type__c:null,psa_tm_Last_Time_Entry_Date__c:null,PSA_Adoption_Event_Not_Required_Reason__c:null,pse_pm_Last_Customer_Survey_Created__c:null,PSA_Status_report_on_Project__c:false,psa_pm_Project_Sub_Type__c:'Managed Services'},
+  {Id:'a9xVM000000PaEnYAK',Name:'PR-019593 ABB Information Systems Limited PS Ms silver Top up SR hours-Project',pse__Stage__c:'In Progress',pse__Project_Status__c:'Green',pse__Start_Date__c:'2026-07-01',pse__End_Date__c:'2026-11-30',psa_pm_PercentComplete__c:null,pse__Planned_Hours__c:480,pse__Scheduled_Hours_Remaining__c:169,PSA_PM_Total_Billable_Hours_Remaining__c:327,pse__Financial_Status__c:'Green',pse__Schedule_Status__c:'Green',pse__Scope_Status__c:'Green',pse__Account__r:{Name:'ABB Information Systems Limited'},psa_pm_At_Risk__c:false,PSA_PM_Resources__c:'Green',pse__Project_Manager__c:'003VM00000JsZylYAF',pse__Project_Manager__r:{Name:'Megha Sharma'},psa_pm_Portfolio_Manager__r:{Name:'Christopher Mellbin'},psa_Overall_Project_Status_Trend__c:'Green',PSA_PM_Last_Project_Status_Report_Week__c:null,pse__Billable_External_Hours__c:0,psa_pm_Project_Category__c:null,psa_pm_Engagement_Type__c:null,psa_tm_Last_Time_Entry_Date__c:null,PSA_Adoption_Event_Not_Required_Reason__c:null,pse_pm_Last_Customer_Survey_Created__c:null,PSA_Status_report_on_Project__c:false,psa_pm_Project_Sub_Type__c:'Managed Services'},
+  {Id:'a9xVM000000OVDxYAO',Name:'PR-019505 Grant Thornton Advisors LLC PS Managed Services Renewal 2026-Project',pse__Stage__c:'In Progress',pse__Project_Status__c:'Green',pse__Start_Date__c:'2026-06-05',pse__End_Date__c:'2028-06-04',psa_pm_PercentComplete__c:16.2,pse__Planned_Hours__c:2088,pse__Scheduled_Hours_Remaining__c:550,PSA_PM_Total_Billable_Hours_Remaining__c:1671,pse__Financial_Status__c:'Green',pse__Schedule_Status__c:'Green',pse__Scope_Status__c:'Green',pse__Account__r:{Name:'Grant Thornton Advisors LLC'},psa_pm_At_Risk__c:false,PSA_PM_Resources__c:'Green',pse__Project_Manager__c:'0033f000006Jdm4AAC',pse__Project_Manager__r:{Name:'Suman Viswanathan'},psa_pm_Portfolio_Manager__r:{Name:'Sanjit Asokan'},psa_Overall_Project_Status_Trend__c:'Green',PSA_PM_Last_Project_Status_Report_Week__c:null,pse__Billable_External_Hours__c:0,psa_pm_Project_Category__c:null,psa_pm_Engagement_Type__c:null,psa_tm_Last_Time_Entry_Date__c:null,PSA_Adoption_Event_Not_Required_Reason__c:null,pse_pm_Last_Customer_Survey_Created__c:null,PSA_Status_report_on_Project__c:false,psa_pm_Project_Sub_Type__c:'Managed Services'},
+  {Id:'a9xVM000000CdaHYAS',Name:'PR-018338 Prudential PS Consulting Data Retention-Project',pse__Stage__c:'In Progress',pse__Project_Status__c:'Green',pse__Start_Date__c:'2025-10-06',pse__End_Date__c:'2026-10-31',psa_pm_PercentComplete__c:70.7,pse__Planned_Hours__c:1450,pse__Scheduled_Hours_Remaining__c:145,PSA_PM_Total_Billable_Hours_Remaining__c:-242,pse__Financial_Status__c:'Green',pse__Schedule_Status__c:'Yellow',pse__Scope_Status__c:'Green',pse__Account__r:{Name:'Prudential Services Singapore Pte. Ltd.'},psa_pm_At_Risk__c:false,PSA_PM_Resources__c:'Green',pse__Project_Manager__c:'0036S00005dvoulQAA',pse__Project_Manager__r:{Name:'Upasana Barbaruah'},psa_pm_Portfolio_Manager__r:{Name:'Abhinav Ray'},psa_Overall_Project_Status_Trend__c:'Yellow',PSA_PM_Last_Project_Status_Report_Week__c:null,pse__Billable_External_Hours__c:0,psa_pm_Project_Category__c:null,psa_pm_Engagement_Type__c:null,psa_tm_Last_Time_Entry_Date__c:'2026-08-20',PSA_Adoption_Event_Not_Required_Reason__c:null,pse_pm_Last_Customer_Survey_Created__c:null,PSA_Status_report_on_Project__c:false,psa_pm_Project_Sub_Type__c:'Consulting'},
+  {Id:'a9xVM000000RQWHYA4',Name:'PR-019717 NSE MDM DG PS Implementation-Project',pse__Stage__c:'In Progress',pse__Project_Status__c:'Green',pse__Start_Date__c:'2026-09-01',pse__End_Date__c:'2027-04-03',psa_pm_PercentComplete__c:6.2,pse__Planned_Hours__c:4359,pse__Scheduled_Hours_Remaining__c:3445,PSA_PM_Total_Billable_Hours_Remaining__c:4080,pse__Financial_Status__c:'Green',pse__Schedule_Status__c:'Green',pse__Scope_Status__c:'Green',pse__Account__r:{Name:'National Stock Exchange of India Limited'},psa_pm_At_Risk__c:false,PSA_PM_Resources__c:'Green',pse__Project_Manager__c:'0036S00005dvoulQAA',pse__Project_Manager__r:{Name:'Upasana Barbaruah'},psa_pm_Portfolio_Manager__r:{Name:'Pankaj Anand'},psa_Overall_Project_Status_Trend__c:'Green',PSA_PM_Last_Project_Status_Report_Week__c:null,pse__Billable_External_Hours__c:0,psa_pm_Project_Category__c:null,psa_pm_Engagement_Type__c:null,psa_tm_Last_Time_Entry_Date__c:null,PSA_Adoption_Event_Not_Required_Reason__c:null,pse_pm_Last_Customer_Survey_Created__c:null,PSA_Status_report_on_Project__c:false,psa_pm_Project_Sub_Type__c:'Consulting'},
+  {Id:'a9xVM000000Fn8TYAS',Name:'PR-018757 MS Financing LLC PS Project Bronze RA_Multi Delivery',pse__Stage__c:'In Progress',pse__Project_Status__c:'Green',pse__Start_Date__c:'2026-02-05',pse__End_Date__c:'2027-02-04',psa_pm_PercentComplete__c:83.3,pse__Planned_Hours__c:274,pse__Scheduled_Hours_Remaining__c:0,PSA_PM_Total_Billable_Hours_Remaining__c:0,pse__Financial_Status__c:'Green',pse__Schedule_Status__c:'Green',pse__Scope_Status__c:'Green',pse__Account__r:{Name:'MS Financing LLC'},psa_pm_At_Risk__c:false,PSA_PM_Resources__c:'Green',pse__Project_Manager__c:'0036S00005dvoulQAA',pse__Project_Manager__r:{Name:'Upasana Barbaruah'},psa_pm_Portfolio_Manager__r:{Name:'Alex Joselow'},psa_Overall_Project_Status_Trend__c:'Green',PSA_PM_Last_Project_Status_Report_Week__c:null,pse__Billable_External_Hours__c:0,psa_pm_Project_Category__c:null,psa_pm_Engagement_Type__c:null,psa_tm_Last_Time_Entry_Date__c:null,PSA_Adoption_Event_Not_Required_Reason__c:null,pse_pm_Last_Customer_Survey_Created__c:null,PSA_Status_report_on_Project__c:false,psa_pm_Project_Sub_Type__c:'Managed Services'},
+  {Id:'a9xVM000000GGvHYAW',Name:'PR-018841 2027 GCS CRE Support',pse__Stage__c:'In Progress',pse__Project_Status__c:null,pse__Start_Date__c:'2026-01-18',pse__End_Date__c:'2027-01-23',psa_pm_PercentComplete__c:null,pse__Planned_Hours__c:0,pse__Scheduled_Hours_Remaining__c:0,PSA_PM_Total_Billable_Hours_Remaining__c:0,pse__Financial_Status__c:null,pse__Schedule_Status__c:null,pse__Scope_Status__c:null,pse__Account__r:null,psa_pm_At_Risk__c:false,PSA_PM_Resources__c:null,pse__Project_Manager__c:'0036S00005dvoulQAA',pse__Project_Manager__r:{Name:'Upasana Barbaruah'},psa_pm_Portfolio_Manager__r:{Name:'Pankaj Anand'},psa_Overall_Project_Status_Trend__c:null,PSA_PM_Last_Project_Status_Report_Week__c:null,pse__Billable_External_Hours__c:0,psa_pm_Project_Category__c:'Productive Non - Billable',psa_pm_Engagement_Type__c:null,psa_tm_Last_Time_Entry_Date__c:null,PSA_Adoption_Event_Not_Required_Reason__c:null,pse_pm_Last_Customer_Survey_Created__c:null,PSA_Status_report_on_Project__c:false,psa_pm_Project_Sub_Type__c:null},
+  {Id:'a9xVM000000HTtdYAG',Name:'PR-019003 National Stock Exchange of India Limited PS DEI Consulting-Project',pse__Stage__c:'In Progress',pse__Project_Status__c:'Green',pse__Start_Date__c:'2026-02-02',pse__End_Date__c:'2026-10-31',psa_pm_PercentComplete__c:86.7,pse__Planned_Hours__c:1280,pse__Scheduled_Hours_Remaining__c:20,PSA_PM_Total_Billable_Hours_Remaining__c:131,pse__Financial_Status__c:'Green',pse__Schedule_Status__c:'Green',pse__Scope_Status__c:'Green',pse__Account__r:{Name:'National Stock Exchange of India Limited'},psa_pm_At_Risk__c:false,PSA_PM_Resources__c:'Green',pse__Project_Manager__c:'0036S00005dvoulQAA',pse__Project_Manager__r:{Name:'Upasana Barbaruah'},psa_pm_Portfolio_Manager__r:{Name:'Pankaj Anand'},psa_Overall_Project_Status_Trend__c:'Green',PSA_PM_Last_Project_Status_Report_Week__c:null,pse__Billable_External_Hours__c:0,psa_pm_Project_Category__c:null,psa_pm_Engagement_Type__c:null,psa_tm_Last_Time_Entry_Date__c:null,PSA_Adoption_Event_Not_Required_Reason__c:null,pse_pm_Last_Customer_Survey_Created__c:null,PSA_Status_report_on_Project__c:false,psa_pm_Project_Sub_Type__c:'Consulting'},
+  {Id:'a9xVM000000NM7tYAG',Name:'PR-019432 Woolworths Greenstock PS P360 SaaS SSO & Secure Agent-Project',pse__Stage__c:'In Progress',pse__Project_Status__c:'Green',pse__Start_Date__c:'2026-07-27',pse__End_Date__c:'2026-11-30',psa_pm_PercentComplete__c:100,pse__Planned_Hours__c:144,pse__Scheduled_Hours_Remaining__c:41,PSA_PM_Total_Billable_Hours_Remaining__c:-8,pse__Financial_Status__c:'Green',pse__Schedule_Status__c:'Green',pse__Scope_Status__c:'Green',pse__Account__r:{Name:'Woolworths Group Limited'},psa_pm_At_Risk__c:false,PSA_PM_Resources__c:'Green',pse__Project_Manager__c:'0036S00005dvoulQAA',pse__Project_Manager__r:{Name:'Upasana Barbaruah'},psa_pm_Portfolio_Manager__r:{Name:'Nenad Jovanovic'},psa_Overall_Project_Status_Trend__c:'Green',PSA_PM_Last_Project_Status_Report_Week__c:null,pse__Billable_External_Hours__c:0,psa_pm_Project_Category__c:null,psa_pm_Engagement_Type__c:null,psa_tm_Last_Time_Entry_Date__c:null,PSA_Adoption_Event_Not_Required_Reason__c:null,pse_pm_Last_Customer_Survey_Created__c:null,PSA_Status_report_on_Project__c:false,psa_pm_Project_Sub_Type__c:'Consulting'}
+];
+
+/* ── STATE ── */
+var state = {
+  allProjects: [], filtered: [], displayed: [],
+  activeDM: 'all', searchQuery: '', sortCol: null, sortDir: 'asc',
+  activeKPI: null, kpiMatches: [], dataSource: 'bundled',
+  charts: { doughnut: null, health: null, complete: null }
+};
+
+/* ── HELPERS ── */
+function parseDate(str) {
+  if (!str) return null;
+  var p = str.split('-');
+  if (p.length !== 3) return null;
+  return new Date(Date.UTC(+p[0], +p[1]-1, +p[2], 12, 0, 0));
+}
+function daysDiff(d1, d2) { return Math.round((d1.getTime() - d2.getTime()) / 86400000); }
+function fmtDate(str) {
+  if (!str) return '—';
+  var d = parseDate(str); if (!d) return '—';
+  var m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return d.getUTCDate() + ' ' + m[d.getUTCMonth()] + ' ' + String(d.getUTCFullYear()).slice(2);
+}
+function fmtNum(n) { return (n === null || n === undefined) ? '—' : Number(n).toLocaleString(); }
+function pillClass(val) {
+  if (!val) return 'pill-gray';
+  var v = val.toLowerCase();
+  return v === 'green' ? 'pill-green' : v === 'yellow' ? 'pill-yellow' : v === 'red' ? 'pill-red' : 'pill-gray';
+}
+function makePill(val) {
+  var span = document.createElement('span');
+  span.className = 'status-pill ' + pillClass(val);
+  var dot = document.createElement('span'); dot.textContent = '●'; dot.style.fontSize = '0.6rem';
+  span.appendChild(dot);
+  span.appendChild(document.createTextNode(' ' + (val || 'N/A')));
+  return span;
+}
+
+/* ── KPI DEFINITIONS ── */
+var KPI_DEFS = [
+  { id:'total',            label:'Total Active Projects',    icon:'📁', border:'green',  match: function() { return true; } },
+  { id:'no_status',        label:'No Status Updated',        icon:'⚪',       border:'yellow', match: function(p) { return !p.pse__Project_Status__c; } },
+  { id:'missing_reports',  label:'Missing Status Reports',   icon:'📋', border:'yellow', match: function(p) { return p.PSA_Status_report_on_Project__c === false && !p.PSA_PM_Last_Project_Status_Report_Week__c; } },
+  { id:'red_status',       label:'Red Status',               icon:'🔴', border:'red',    match: function(p) { return p.pse__Project_Status__c === 'Red' || p.psa_Overall_Project_Status_Trend__c === 'Red'; } },
+  { id:'past_end',         label:'Past End Date',            icon:'📅', border:'red',    match: function(p) { var d = parseDate(p.pse__End_Date__c); return d && d < TODAY; } },
+  { id:'ending_oct',       label:'Ending by Oct 2026',       icon:'⏳',       border:'yellow',
+    match: function(p) { var d = parseDate(p.pse__End_Date__c); var oct = new Date(Date.UTC(2026,9,31,12,0,0)); return d && d >= TODAY && d <= oct; } },
+  { id:'low_margin',       label:'Low Margin (<50%)',        icon:'💸', border:'red',    match: function(p) { return p.psa_pm_PercentComplete__c !== null && p.psa_pm_PercentComplete__c !== undefined && p.psa_pm_PercentComplete__c < 50; } },
+  { id:'timecard',         label:'Timecard >30 Days',        icon:'🕐', border:'red',
+    match: function(p) { if (!p.psa_tm_Last_Time_Entry_Date__c) return true; var d = parseDate(p.psa_tm_Last_Time_Entry_Date__c); return d && daysDiff(TODAY, d) > 30; } },
+  { id:'zero_hours',       label:'0 Planned Hours',          icon:'⏱️', border:'yellow', match: function(p) { return !p.pse__Planned_Hours__c || p.pse__Planned_Hours__c === 0; } },
+  { id:'planned_lt_billed',label:'Planned < Billed',         icon:'⚠️', border:'yellow', match: function(p) { return p.PSA_PM_Total_Billable_Hours_Remaining__c !== null && p.PSA_PM_Total_Billable_Hours_Remaining__c < 0; } },
+  { id:'no_category',      label:'Project Categorization',   icon:'🗂️', border:'yellow', match: function(p) { return !p.psa_pm_Project_Sub_Type__c; } },
+  { id:'adoption_upcoming',label:'Upcoming Adoption Events', icon:'🎯', border:'blue',   match: function(p) { return !p.PSA_Adoption_Event_Not_Required_Reason__c; } },
+  { id:'adoption_missing', label:'Missing Adoption Events',  icon:'❌',       border:'red',    match: function(p) { return !p.PSA_Adoption_Event_Not_Required_Reason__c && p.psa_pm_Project_Category__c !== 'Productive Non - Billable'; } },
+  { id:'missing_csat',     label:'Missing CSAT',             icon:'⭐',       border:'yellow', match: function(p) { return !p.pse_pm_Last_Customer_Survey_Created__c; } },
+  { id:'milestones',       label:'Milestones Due',           icon:'🏁', border:'yellow', placeholder: true, match: function() { return false; } }
+];
+
+/* ── FETCH: calls server proxy /api/projects ── */
+function fetchLiveData() {
+  var btn = document.getElementById('refresh-btn');
+  btn.classList.add('loading');
+  clearEl(btn);
+  var sp = document.createElement('span'); sp.className = 'spinner';
+  btn.appendChild(sp);
+  btn.appendChild(document.createTextNode(' Fetching…'));
+
+  return fetch('/api/projects')
+    .then(function(res) { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
+    .then(function(data) {
+      var records = (data && data.records) ? data.records : [];
+      if (records.length === 0) throw new Error('Empty result');
+      btn.classList.remove('loading');
+      clearEl(btn); btn.textContent = '↺ Refresh';
+      return { records: records, source: 'live' };
+    })
+    .catch(function(err) {
+      console.warn('Live fetch failed (' + err.message + '), using bundled data.');
+      btn.classList.remove('loading');
+      clearEl(btn); btn.textContent = '↺ Refresh';
+      return { records: BUNDLED_DATA, source: 'bundled' };
+    });
+}
+
+/* ── FILTER & SORT ── */
+function applyDMFilter() {
+  state.filtered = state.activeDM === 'all'
+    ? state.allProjects.slice()
+    : state.allProjects.filter(function(p) { return p.pse__Project_Manager__c === state.activeDM; });
+}
+function applySearchFilter() {
+  var q = state.searchQuery.toLowerCase().trim();
+  if (!q) { state.displayed = state.filtered.slice(); return; }
+  state.displayed = state.filtered.filter(function(p) {
+    var acc = (p.pse__Account__r && p.pse__Account__r.Name) ? p.pse__Account__r.Name : '';
+    var dm  = (p.pse__Project_Manager__r && p.pse__Project_Manager__r.Name) ? p.pse__Project_Manager__r.Name : '';
+    return (p.Name||'').toLowerCase().indexOf(q) !== -1 || acc.toLowerCase().indexOf(q) !== -1 || dm.toLowerCase().indexOf(q) !== -1;
+  });
+}
+function getSortValue(p, col) {
+  switch(col) {
+    case 'name':      return (p.Name||'').toLowerCase();
+    case 'account':   return ((p.pse__Account__r&&p.pse__Account__r.Name)||'').toLowerCase();
+    case 'dm':        return ((p.pse__Project_Manager__r&&p.pse__Project_Manager__r.Name)||'').toLowerCase();
+    case 'status':    return p.pse__Project_Status__c||'';
+    case 'pct':       return p.psa_pm_PercentComplete__c != null ? p.psa_pm_PercentComplete__c : -1;
+    case 'enddate':   return p.pse__End_Date__c||'';
+    case 'financial': return p.pse__Financial_Status__c||'';
+    case 'schedule':  return p.pse__Schedule_Status__c||'';
+    case 'resources': return p.PSA_PM_Resources__c||'';
+    case 'hrsleft':   return p.PSA_PM_Total_Billable_Hours_Remaining__c != null ? p.PSA_PM_Total_Billable_Hours_Remaining__c : -99999;
+    case 'subtype':   return p.psa_pm_Project_Sub_Type__c||'';
+    case 'portfolio': return ((p.psa_pm_Portfolio_Manager__r&&p.psa_pm_Portfolio_Manager__r.Name)||'').toLowerCase();
+    default: return '';
+  }
+}
+function applySort() {
+  if (!state.sortCol) return;
+  var col = state.sortCol, dir = state.sortDir === 'asc' ? 1 : -1;
+  state.displayed.sort(function(a,b) {
+    var av = getSortValue(a,col), bv = getSortValue(b,col);
+    if (av==null) return 1; if (bv==null) return -1;
+    return av < bv ? -dir : av > bv ? dir : 0;
+  });
+}
+
+/* ── ROW ALERT ── */
+function rowAlertClass(p) {
+  var ed = parseDate(p.pse__End_Date__c);
+  var pastEnd   = ed && ed < TODAY;
+  var redStatus = p.pse__Project_Status__c === 'Red' || p.psa_Overall_Project_Status_Trend__c === 'Red';
+  var lateTcard = !p.psa_tm_Last_Time_Entry_Date__c || (function(){
+    var d = parseDate(p.psa_tm_Last_Time_Entry_Date__c); return d && daysDiff(TODAY,d) > 30;
+  })();
+  if (pastEnd || redStatus || lateTcard) return 'row-alert-red';
+  if (!p.pse__Project_Status__c || !p.pse__Planned_Hours__c || p.pse__Planned_Hours__c === 0) return 'row-alert-yellow';
+  return '';
+}
+
+/* ── RENDER: HEADER DMs ── */
+function renderHeaderDMs() {
+  var c = document.getElementById('header-dms');
+  clearEl(c);
+  DELIVERY_MANAGERS.forEach(function(dm) {
+    var chip = document.createElement('span'); chip.className = 'header-dm-chip';
+    var dot = document.createElement('span'); dot.className = 'dm-dot'; dot.style.background = dm.color;
+    chip.appendChild(dot);
+    chip.appendChild(document.createTextNode(dm.name));
+    c.appendChild(chip);
+  });
+}
+
+/* ── RENDER: DM FILTER BAR ── */
+function renderDMFilterBar() {
+  var bar = document.getElementById('dm-filter-bar');
+  Array.prototype.slice.call(bar.querySelectorAll('[data-dm]:not([data-dm="all"])')).forEach(function(el){ el.remove(); });
+  var allBtn = bar.querySelector('[data-dm="all"]');
+  allBtn.className = 'dm-filter-btn' + (state.activeDM === 'all' ? ' active' : '');
+  DELIVERY_MANAGERS.forEach(function(dm) {
+    var btn = document.createElement('button');
+    var isActive = state.activeDM === dm.id;
+    btn.className = 'dm-filter-btn' + (isActive ? ' active' : '');
+    btn.setAttribute('data-dm', dm.id);
+    if (isActive) { btn.style.borderColor = dm.color; btn.style.color = dm.color; }
+    var dot = document.createElement('span'); dot.className = 'dm-dot'; dot.style.background = dm.color;
+    btn.appendChild(dot);
+    btn.appendChild(document.createTextNode(dm.name));
+    btn.addEventListener('click', function() {
+      state.activeDM = dm.id; state.activeKPI = null; state.kpiMatches = []; refreshAll();
+    });
+    bar.appendChild(btn);
+  });
+}
+
+/* ── RENDER: KPI GRID ── */
+function renderKPIs() {
+  var grid = document.getElementById('kpi-grid');
+  clearEl(grid);
+  KPI_DEFS.forEach(function(kpi, idx) {
+    var card = document.createElement('div');
+    card.className = 'kpi-card border-' + kpi.border + (state.activeKPI === idx ? ' selected' : '');
+    var icon  = document.createElement('span'); icon.className = 'kpi-icon';  icon.textContent = kpi.icon;
+    var label = document.createElement('div');  label.className = 'kpi-label'; label.textContent = kpi.label;
+    var val   = document.createElement('div');  val.className = 'kpi-value';
+    if (kpi.placeholder) {
+      val.textContent = '—';
+      var note = document.createElement('div'); note.className = 'kpi-note'; note.textContent = 'Requires Milestone data';
+      card.appendChild(icon); card.appendChild(label); card.appendChild(val); card.appendChild(note);
+    } else {
+      val.textContent = String(state.filtered.filter(kpi.match).length);
+      card.appendChild(icon); card.appendChild(label); card.appendChild(val);
+      card.addEventListener('click', function() {
+        if (state.activeKPI === idx) { state.activeKPI = null; state.kpiMatches = []; }
+        else { state.activeKPI = idx; state.kpiMatches = state.filtered.filter(kpi.match).map(function(p){ return p.Id; }); }
+        renderKPIs(); renderTableBody();
+      });
+    }
+    grid.appendChild(card);
+  });
+}
+
+/* ── RENDER: CHARTS ── */
+function renderDoughnutChart() {
+  var counts = { Green:0, Yellow:0, Red:0, 'Not Set':0 };
+  state.filtered.forEach(function(p) {
+    var t = p.psa_Overall_Project_Status_Trend__c || p.pse__Project_Status__c;
+    if (!t) counts['Not Set']++;
+    else if (t==='Green') counts.Green++;
+    else if (t==='Yellow') counts.Yellow++;
+    else if (t==='Red') counts.Red++;
+    else counts['Not Set']++;
+  });
+  var data = [counts.Green, counts.Yellow, counts.Red, counts['Not Set']];
+  if (state.charts.doughnut) { state.charts.doughnut.data.datasets[0].data = data; state.charts.doughnut.update('none'); return; }
+  var ctx = document.getElementById('chart-doughnut').getContext('2d');
+  state.charts.doughnut = new Chart(ctx, {
+    type: 'doughnut',
+    data: { labels: ['Green','Yellow','Red','Not Set'], datasets: [{ data: data, backgroundColor: ['#22c55e','#f59e0b','#ef4444','#4b5563'], borderWidth: 2, borderColor: '#1a1d27', hoverBorderColor: '#fff' }] },
+    options: { responsive:true, maintainAspectRatio:false, cutout:'65%',
+      plugins: { legend: { position:'bottom', labels: { color:'#8892aa', font:{size:11}, padding:8, boxWidth:10 } },
+        tooltip: { callbacks: { label: function(c){ return ' '+c.label+': '+c.raw; } } } } }
+  });
+}
+function renderHealthChart() {
+  var fields = ['pse__Financial_Status__c','pse__Schedule_Status__c','pse__Scope_Status__c'];
+  var g=[0,0,0],y=[0,0,0],r=[0,0,0],n=[0,0,0];
+  state.filtered.forEach(function(p) {
+    fields.forEach(function(f,i) {
+      var v=p[f]; if(!v) n[i]++; else if(v==='Green') g[i]++; else if(v==='Yellow') y[i]++; else if(v==='Red') r[i]++; else n[i]++;
+    });
+  });
+  var ds = [
+    {label:'Green', data:g, backgroundColor:'rgba(34,197,94,0.75)'},
+    {label:'Yellow',data:y, backgroundColor:'rgba(245,158,11,0.75)'},
+    {label:'Red',   data:r, backgroundColor:'rgba(239,68,68,0.75)'},
+    {label:'N/A',   data:n, backgroundColor:'rgba(75,85,99,0.6)'}
+  ];
+  if (state.charts.health) { ds.forEach(function(d,i){ state.charts.health.data.datasets[i].data=d.data; }); state.charts.health.update('none'); return; }
+  var ctx = document.getElementById('chart-health').getContext('2d');
+  state.charts.health = new Chart(ctx, {
+    type:'bar', data:{ labels:['Financial','Schedule','Scope'], datasets:ds },
+    options:{ responsive:true, maintainAspectRatio:false,
+      scales:{ x:{stacked:true,ticks:{color:'#8892aa',font:{size:11}},grid:{color:'rgba(46,49,80,0.4)'}}, y:{stacked:true,ticks:{color:'#8892aa',font:{size:11},stepSize:1},grid:{color:'rgba(46,49,80,0.4)'}} },
+      plugins:{ legend:{ position:'bottom', labels:{color:'#8892aa',font:{size:11},padding:8,boxWidth:10} } } }
+  });
+}
+function renderCompleteChart() {
+  var projects = state.filtered.filter(function(p){ return p.psa_pm_PercentComplete__c != null; })
+    .slice().sort(function(a,b){ return b.psa_pm_PercentComplete__c-a.psa_pm_PercentComplete__c; }).slice(0,15);
+  var labels = projects.map(function(p){ var n=p.Name||''; return n.length>30 ? n.slice(0,28)+'…' : n; });
+  var data   = projects.map(function(p){ return p.psa_pm_PercentComplete__c; });
+  var colors = data.map(function(v){ return v>=75?'rgba(34,197,94,0.75)':v>=40?'rgba(59,130,246,0.75)':'rgba(245,158,11,0.75)'; });
+  if (state.charts.complete) { state.charts.complete.data.labels=labels; state.charts.complete.data.datasets[0].data=data; state.charts.complete.data.datasets[0].backgroundColor=colors; state.charts.complete.update('none'); return; }
+  var ctx = document.getElementById('chart-complete').getContext('2d');
+  state.charts.complete = new Chart(ctx, {
+    type:'bar', data:{ labels:labels, datasets:[{label:'% Complete',data:data,backgroundColor:colors,borderRadius:3}] },
+    options:{ responsive:true, maintainAspectRatio:false, indexAxis:'y',
+      scales:{ x:{min:0,max:100,ticks:{color:'#8892aa',font:{size:10},callback:function(v){return v+'%';}},grid:{color:'rgba(46,49,80,0.4)'}}, y:{ticks:{color:'#8892aa',font:{size:10}},grid:{display:false}} },
+      plugins:{ legend:{display:false}, tooltip:{callbacks:{label:function(c){return ' '+c.raw+'%';}} } } }
+  });
+}
+
+/* ── RENDER: TABLE HEADER ── */
+var COLUMNS = [
+  {key:'name',      label:'Project Name',  sortable:true },
+  {key:'account',   label:'Account',       sortable:true },
+  {key:'dm',        label:'Delivery Mgr',  sortable:true },
+  {key:'status',    label:'Status',        sortable:true },
+  {key:'pct',       label:'% Complete',    sortable:true },
+  {key:'enddate',   label:'Timeline',      sortable:true },
+  {key:'financial', label:'Financial',     sortable:true },
+  {key:'schedule',  label:'Schedule',      sortable:true },
+  {key:'resources', label:'Resources',     sortable:true },
+  {key:'risk',      label:'Risk',          sortable:false},
+  {key:'hrsleft',   label:'Hrs Left',      sortable:true },
+  {key:'subtype',   label:'Sub-Type',      sortable:true },
+  {key:'portfolio', label:'Portfolio Mgr', sortable:true }
+];
+function renderTableHeader() {
+  var tr = document.getElementById('table-head');
+  clearEl(tr);
+  COLUMNS.forEach(function(col) {
+    var th = document.createElement('th');
+    if (col.sortable) {
+      th.setAttribute('data-col', col.key);
+      if (state.sortCol === col.key) th.className = 'sort-' + state.sortDir;
+      th.addEventListener('click', function() {
+        state.sortDir = (state.sortCol===col.key && state.sortDir==='asc') ? 'desc' : 'asc';
+        state.sortCol = col.key;
+        renderTableHeader(); applySearchFilter(); applySort(); renderTableBody();
+      });
+    }
+    var lbl = document.createElement('span'); lbl.textContent = col.label;
+    th.appendChild(lbl);
+    if (col.sortable) {
+      var si = document.createElement('i'); si.className = 'sort-icon';
+      si.textContent = (state.sortCol===col.key) ? (state.sortDir==='asc' ? '▲' : '▼') : '⇅';
+      th.appendChild(si);
+    }
+    tr.appendChild(th);
+  });
+}
+
+/* ── RENDER: TABLE BODY ── */
+function renderTableBody() {
+  var tbody  = document.getElementById('table-body');
+  var rcSpan = document.getElementById('row-count');
+  clearEl(tbody);
+
+  if (state.displayed.length === 0) {
+    var etr = document.createElement('tr'); etr.className = 'empty-row';
+    var etd = document.createElement('td'); etd.colSpan = COLUMNS.length; etd.textContent = 'No projects match the current filters.';
+    etr.appendChild(etd); tbody.appendChild(etr);
+    rcSpan.textContent = '0 projects'; return;
+  }
+  rcSpan.textContent = state.displayed.length + ' project' + (state.displayed.length !== 1 ? 's' : '');
+
+  state.displayed.forEach(function(p) {
+    var tr = document.createElement('tr'); tr.setAttribute('data-id', p.Id);
+    var ac = rowAlertClass(p); if (ac) tr.classList.add(ac);
+    if (state.kpiMatches.indexOf(p.Id) !== -1) tr.classList.add('kpi-highlight');
+
+    // Project Name
+    var tdN = document.createElement('td'); tdN.style.maxWidth = '260px';
+    var lnk = document.createElement('a');
+    lnk.href = SF_INSTANCE + '/lightning/r/pse__Proj__c/' + p.Id + '/view';
+    lnk.target = '_blank'; lnk.rel = 'noopener noreferrer';
+    var nm = p.Name||'—'; lnk.textContent = nm.length>45 ? nm.slice(0,43)+'…' : nm; lnk.title = nm;
+    tdN.appendChild(lnk); tr.appendChild(tdN);
+
+    // Account
+    var tdA = document.createElement('td'); tdA.style.maxWidth = '150px';
+    var accN = (p.pse__Account__r&&p.pse__Account__r.Name) ? p.pse__Account__r.Name : '—';
+    var accS = document.createElement('span'); accS.textContent = accN.length>22 ? accN.slice(0,20)+'…' : accN; accS.title = accN;
+    tdA.appendChild(accS); tr.appendChild(tdA);
+
+    // DM
+    var tdDM = document.createElement('td');
+    var chip = document.createElement('div'); chip.className = 'dm-chip';
+    var dmInf = DM_MAP[p.pse__Project_Manager__c];
+    var dot2 = document.createElement('span'); dot2.className = 'dm-dot'; dot2.style.background = dmInf ? dmInf.color : '#8892aa';
+    var dmFull = (p.pse__Project_Manager__r&&p.pse__Project_Manager__r.Name) ? p.pse__Project_Manager__r.Name : '—';
+    var dmTxt = document.createElement('span'); dmTxt.textContent = dmFull.split(' ').pop(); dmTxt.title = dmFull;
+    chip.appendChild(dot2); chip.appendChild(dmTxt); tdDM.appendChild(chip); tr.appendChild(tdDM);
+
+    // Status
+    var tdS = document.createElement('td'); tdS.appendChild(makePill(p.pse__Project_Status__c)); tr.appendChild(tdS);
+
+    // % Complete
+    var tdP = document.createElement('td'); tdP.style.minWidth = '120px';
+    var pct = p.psa_pm_PercentComplete__c;
+    var pw = document.createElement('div'); pw.className = 'prog-wrap';
+    var po = document.createElement('div'); po.className = 'prog-bar-outer';
+    var pi = document.createElement('div'); pi.className = 'prog-bar-inner';
+    var pn = (pct!=null) ? Math.min(100,Math.max(0,pct)) : 0;
+    pi.style.width = pn + '%'; pi.style.background = pn>=75 ? '#22c55e' : pn>=40 ? '#3b82f6' : '#f59e0b';
+    var pl = document.createElement('span'); pl.className = 'prog-label'; pl.textContent = (pct!=null) ? pct+'%' : '—';
+    po.appendChild(pi); pw.appendChild(po); pw.appendChild(pl); tdP.appendChild(pw); tr.appendChild(tdP);
+
+    // Timeline
+    var tdT = document.createElement('td'); tdT.style.minWidth = '90px';
+    var sd = parseDate(p.pse__Start_Date__c), ed = parseDate(p.pse__End_Date__c);
+    var tlW = document.createElement('div'); tlW.className = 'timeline-wrap';
+    var tlO = document.createElement('div'); tlO.className = 'timeline-bar-outer';
+    var tlI = document.createElement('div'); tlI.className = 'timeline-bar-inner';
+    var tp = 0;
+    if (sd && ed && ed > sd) { var tot = ed.getTime()-sd.getTime(); tp = Math.max(0,Math.min(100,Math.round((Math.min(TODAY.getTime(),ed.getTime())-sd.getTime())/tot*100))); }
+    var pastE = ed && ed < TODAY;
+    tlI.style.width = tp + '%'; tlI.style.background = pastE ? '#ef4444' : tp>80 ? '#f59e0b' : '#5b6cf9';
+    tlO.appendChild(tlI);
+    var tlD = document.createElement('div'); tlD.className = 'timeline-dates';
+    var tlS2 = document.createElement('span'); tlS2.textContent = fmtDate(p.pse__Start_Date__c);
+    var tlE2 = document.createElement('span'); tlE2.textContent = fmtDate(p.pse__End_Date__c);
+    if (pastE) tlE2.style.color = '#ef4444';
+    tlD.appendChild(tlS2); tlD.appendChild(tlE2);
+    tlW.appendChild(tlO); tlW.appendChild(tlD); tdT.appendChild(tlW); tr.appendChild(tdT);
+
+    // Financial / Schedule / Resources
+    var tdF  = document.createElement('td'); tdF.appendChild(makePill(p.pse__Financial_Status__c));  tr.appendChild(tdF);
+    var tdSc = document.createElement('td'); tdSc.appendChild(makePill(p.pse__Schedule_Status__c));  tr.appendChild(tdSc);
+    var tdR  = document.createElement('td'); tdR.appendChild(makePill(p.PSA_PM_Resources__c));        tr.appendChild(tdR);
+
+    // Risk
+    var tdRk = document.createElement('td');
+    if (p.psa_pm_At_Risk__c) {
+      var rs = document.createElement('span'); rs.className = 'at-risk'; rs.textContent = '⚠ At Risk'; tdRk.appendChild(rs);
+    } else {
+      var nr = document.createElement('span'); nr.style.color = 'var(--muted)'; nr.textContent = '—'; tdRk.appendChild(nr);
+    }
+    tr.appendChild(tdRk);
+
+    // Hrs Left
+    var tdH = document.createElement('td');
+    var hl = p.PSA_PM_Total_Billable_Hours_Remaining__c;
+    var hs = document.createElement('span');
+    if (hl != null) { hs.textContent = fmtNum(hl); if (hl<0) hs.style.color='#ef4444'; else if(hl===0) hs.style.color='var(--muted)'; }
+    else { hs.textContent = '—'; hs.style.color = 'var(--muted)'; }
+    tdH.appendChild(hs); tr.appendChild(tdH);
+
+    // Sub-Type
+    var tdSt = document.createElement('td');
+    var sts = document.createElement('span'); sts.textContent = p.psa_pm_Project_Sub_Type__c || '—';
+    if (!p.psa_pm_Project_Sub_Type__c) sts.style.color = 'var(--muted)';
+    tdSt.appendChild(sts); tr.appendChild(tdSt);
+
+    // Portfolio Mgr
+    var tdPm = document.createElement('td');
+    var pmN = (p.psa_pm_Portfolio_Manager__r&&p.psa_pm_Portfolio_Manager__r.Name) ? p.psa_pm_Portfolio_Manager__r.Name : '—';
+    var pmS = document.createElement('span'); pmS.textContent = pmN;
+    if (pmN === '—') pmS.style.color = 'var(--muted)';
+    tdPm.appendChild(pmS); tr.appendChild(tdPm);
+
+    tbody.appendChild(tr);
+  });
+}
+
+/* ── REFRESH ALL ── */
+function refreshAll() {
+  applyDMFilter(); applySearchFilter(); applySort();
+  var bar = document.getElementById('dm-filter-bar');
+  var allBtn = bar.querySelector('[data-dm="all"]');
+  allBtn.className = 'dm-filter-btn' + (state.activeDM==='all' ? ' active' : '');
+  DELIVERY_MANAGERS.forEach(function(dm) {
+    var btn = bar.querySelector('[data-dm="'+dm.id+'"]');
+    if (!btn) return;
+    var isActive = state.activeDM === dm.id;
+    btn.className = 'dm-filter-btn' + (isActive ? ' active' : '');
+    btn.style.borderColor = isActive ? dm.color : '';
+    btn.style.color       = isActive ? dm.color : '';
+  });
+  renderKPIs(); renderDoughnutChart(); renderHealthChart(); renderCompleteChart();
+  renderTableHeader(); renderTableBody();
+}
+
+/* ── LOAD DATA ── */
+function loadData(source, records) {
+  state.allProjects = records; state.dataSource = source; state.activeKPI = null; state.kpiMatches = [];
+  var badge = document.getElementById('data-source-badge');
+  badge.className = source==='live' ? 'badge-live' : 'badge-bundled';
+  badge.textContent = source==='live' ? 'LIVE' : 'BUNDLED';
+  document.getElementById('last-refresh').textContent = 'Updated ' + new Date().toLocaleTimeString();
+  refreshAll();
+}
+
+/* ── INIT ── */
+function init() {
+  renderHeaderDMs(); renderDMFilterBar(); renderTableHeader();
+  document.querySelector('[data-dm="all"]').addEventListener('click', function() {
+    state.activeDM = 'all'; state.activeKPI = null; state.kpiMatches = []; refreshAll();
+  });
+  document.getElementById('search-box').addEventListener('input', function(e) {
+    state.searchQuery = e.target.value; applySearchFilter(); applySort(); renderTableBody();
+  });
+  document.getElementById('refresh-btn').addEventListener('click', function() {
+    fetchLiveData().then(function(r) { loadData(r.source, r.records); });
+  });
+  fetchLiveData().then(function(r) { loadData(r.source, r.records); });
+}
+
+document.readyState === 'loading'
+  ? document.addEventListener('DOMContentLoaded', init)
+  : init();
+</script>
+</body>
+</html>

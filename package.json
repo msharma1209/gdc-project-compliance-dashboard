@@ -1,0 +1,13 @@
+{
+  "name": "gdc-compliance-dashboard",
+  "version": "1.0.0",
+  "description": "Informatica Practice - GDC Project Compliance Dashboard",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
