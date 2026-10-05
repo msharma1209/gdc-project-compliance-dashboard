@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: gdc-compliance-dashboard
+    name: gdc-project-compliance-dashboard
     runtime: node
     buildCommand: ""        # no npm install needed — no dependencies
     startCommand: node server.js
