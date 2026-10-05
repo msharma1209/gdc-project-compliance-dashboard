@@ -315,53 +315,107 @@ function makePill(val) {
 }
 
 /* ── KPI DEFINITIONS ── */
+// Helper: does the project have an adoption event in Forecast or Final state?
+function hasActiveForecastAdoption(p) {
+  var events = p.pse__Adoption_Events__r && p.pse__Adoption_Events__r.records;
+  if (!events || events.length === 0) return false;
+  return events.some(function(e) {
+    var s = (e.pse__Status__c || '').toLowerCase();
+    return s === 'forecast' || s === 'final';
+  });
+}
+// Helper: does the project have an adoption event in Forecast state due within 30 days?
+function hasUpcomingForecastAdoption(p) {
+  var events = p.pse__Adoption_Events__r && p.pse__Adoption_Events__r.records;
+  if (!events || events.length === 0) return false;
+  var in30 = new Date(TODAY.getTime() + 30*24*60*60*1000);
+  return events.some(function(e) {
+    if ((e.pse__Status__c || '').toLowerCase() !== 'forecast') return false;
+    var d = parseDate(e.pse__Due_Date__c);
+    return d && d >= TODAY && d <= in30;
+  });
+}
+// Helper: does the project have a billable milestone due within 30 days?
+function hasBillableMilestoneDueSoon(p) {
+  var ms = p.pse__Milestones__r && p.pse__Milestones__r.records;
+  if (!ms || ms.length === 0) return false;
+  var in30 = new Date(TODAY.getTime() + 30*24*60*60*1000);
+  return ms.some(function(m) {
+    if (!m.pse__Billable__c) return false;
+    var d = parseDate(m.pse__Due_Date__c);
+    return d && d >= TODAY && d <= in30;
+  });
+}
+// Helper: is this an internal/non-billable project?
+function isInternal(p) {
+  var cat = (p.psa_pm_Project_Category__c || '').toLowerCase();
+  return cat === 'productive non - billable' || cat === 'internal';
+}
+
 var KPI_DEFS = [
   { id:'total',            label:'Total Active Projects',    icon:'📁', border:'green',
-    desc:'All active In Progress projects',
-    match: function() { return true; } },
+    desc:'All active In Progress external (billable) projects',
+    match: function(p) { return !isInternal(p); } },
   { id:'no_status',        label:'No Status Updated',        icon:'⚪',  border:'yellow',
-    desc:'Projects with no overall status set',
-    match: function(p) { return !p.pse__Project_Status__c; } },
+    desc:'Projects with no overall project status set',
+    match: function(p) { return !isInternal(p) && !p.pse__Project_Status__c; } },
   { id:'missing_reports',  label:'Missing Status Reports',   icon:'📋', border:'yellow',
-    desc:'Status report not submitted this week',
-    match: function(p) { return p.PSA_Status_report_on_Project__c===false && !p.PSA_PM_Last_Project_Status_Report_Week__c; } },
+    desc:'Status report not updated in the last 2 weeks',
+    match: function(p) {
+      if (isInternal(p)) return false;
+      if (!p.PSA_PM_Last_Project_Status_Report_Week__c) return true;
+      var d = parseDate(p.PSA_PM_Last_Project_Status_Report_Week__c);
+      return d && daysDiff(TODAY, d) > 14;
+    }
+  },
   { id:'red_status',       label:'Red Status',               icon:'🔴', border:'red',
-    desc:'Projects with Red overall status or trend',
-    match: function(p) { return p.pse__Project_Status__c==='Red'||p.psa_Overall_Project_Status_Trend__c==='Red'; } },
+    desc:'Projects with Red overall status or status trend',
+    match: function(p) { return !isInternal(p) && (p.pse__Project_Status__c==='Red'||p.psa_Overall_Project_Status_Trend__c==='Red'); } },
   { id:'past_end',         label:'Past End Date',            icon:'📅', border:'red',
-    desc:'Projects whose end date has already passed',
-    match: function(p) { var d=parseDate(p.pse__End_Date__c); return d&&d<TODAY; } },
+    desc:'Projects whose end date is earlier than today',
+    match: function(p) { var d=parseDate(p.pse__End_Date__c); return !isInternal(p) && d && d<TODAY; } },
   { id:'ending_oct',       label:'Ending by Oct 2026',       icon:'⏳',  border:'yellow',
     desc:'Projects ending on or before 31 Oct 2026',
-    match: function(p) { var d=parseDate(p.pse__End_Date__c); var oct=new Date(Date.UTC(2026,9,31,12,0,0)); return d&&d>=TODAY&&d<=oct; } },
+    match: function(p) { var d=parseDate(p.pse__End_Date__c); var oct=new Date(Date.UTC(2026,9,31,12,0,0)); return !isInternal(p) && d&&d>=TODAY&&d<=oct; } },
   { id:'low_margin',       label:'Low Margin (<50%)',        icon:'💸', border:'red',
-    desc:'Projects with less than 50% completion',
-    match: function(p) { return p.psa_pm_PercentComplete__c!==null&&p.psa_pm_PercentComplete__c!==undefined&&p.psa_pm_PercentComplete__c<50; } },
+    desc:'Projects with margin less than 50%',
+    match: function(p) { return !isInternal(p) && p.psa_pm_PercentComplete__c!==null && p.psa_pm_PercentComplete__c!==undefined && p.psa_pm_PercentComplete__c<50; } },
   { id:'timecard',         label:'Timecard >30 Days',        icon:'🕐', border:'red',
-    desc:'No time entry logged in the last 30 days',
-    match: function(p) { if(!p.psa_tm_Last_Time_Entry_Date__c) return true; var d=parseDate(p.psa_tm_Last_Time_Entry_Date__c); return d&&daysDiff(TODAY,d)>30; } },
+    desc:'Latest timecard submission is more than 30 days ago',
+    match: function(p) {
+      if (isInternal(p)) return false;
+      if (!p.psa_tm_Last_Time_Entry_Date__c) return true;
+      var d=parseDate(p.psa_tm_Last_Time_Entry_Date__c);
+      return d && daysDiff(TODAY,d)>30;
+    }
+  },
   { id:'zero_hours',       label:'0 Planned Hours',          icon:'⏱️', border:'yellow',
-    desc:'Projects with zero planned hours',
-    match: function(p) { return !p.pse__Planned_Hours__c||p.pse__Planned_Hours__c===0; } },
-  { id:'planned_lt_billed',label:'Planned < Billed',         icon:'⚠️', border:'yellow',
-    desc:'Billable hours remaining is negative',
-    match: function(p) { return p.PSA_PM_Total_Billable_Hours_Remaining__c!==null&&p.PSA_PM_Total_Billable_Hours_Remaining__c<0; } },
+    desc:'Projects with no planned hours entered',
+    match: function(p) { return !isInternal(p) && (!p.pse__Planned_Hours__c || p.pse__Planned_Hours__c===0); } },
+  { id:'planned_lt_billed',label:'Planned < Billed Hours',   icon:'⚠️', border:'yellow',
+    desc:'Planned hours are less than billed hours (negative remaining)',
+    match: function(p) { return !isInternal(p) && p.PSA_PM_Total_Billable_Hours_Remaining__c!==null && p.PSA_PM_Total_Billable_Hours_Remaining__c<0; } },
   { id:'no_category',      label:'Project Categorization',   icon:'🗂️', border:'yellow',
     desc:'Projects missing a Sub-Type categorization',
     match: function(p) { return !p.psa_pm_Project_Sub_Type__c; } },
   { id:'adoption_upcoming',label:'Upcoming Adoption Events', icon:'🎯', border:'blue',
-    desc:'Projects with no adoption event exemption reason',
-    match: function(p) { return !p.PSA_Adoption_Event_Not_Required_Reason__c; } },
+    desc:'Adoption event in Forecast state with due date in the next 30 days',
+    match: function(p) { return !isInternal(p) && hasUpcomingForecastAdoption(p); } },
   { id:'adoption_missing', label:'Missing Adoption Events',  icon:'❌',  border:'red',
-    desc:'Billable projects missing adoption event reason',
-    match: function(p) { return !p.PSA_Adoption_Event_Not_Required_Reason__c&&p.psa_pm_Project_Category__c!=='Productive Non - Billable'; } },
+    desc:'Billable projects with no adoption event in Forecast or Final state',
+    match: function(p) { return !isInternal(p) && !hasActiveForecastAdoption(p); } },
   { id:'missing_csat',     label:'Missing CSAT',             icon:'⭐',  border:'yellow',
-    desc:'No customer satisfaction survey on record',
-    match: function(p) { return !p.pse_pm_Last_Customer_Survey_Created__c; } },
-  { id:'milestones',       label:'Milestones Due',           icon:'🏁', border:'yellow',
-    placeholder: true,
-    desc:'Requires Milestone object data (not yet available)',
-    match: function() { return false; } }
+    desc:'No customer satisfaction survey created in the current calendar year',
+    match: function(p) {
+      if (isInternal(p)) return false;
+      if (!p.pse_pm_Last_Customer_Survey_Created__c) return true;
+      var d = parseDate(p.pse_pm_Last_Customer_Survey_Created__c);
+      return !d || d.getUTCFullYear() < TODAY.getFullYear();
+    }
+  },
+  { id:'milestones',       label:'Milestones Due (30d)',     icon:'🏁', border:'red',
+    desc:'Billable milestones with due date in the next 30 days',
+    match: function(p) { return !isInternal(p) && hasBillableMilestoneDueSoon(p); } }
 ];
 
 /* ── FETCH ── */

@@ -65,7 +65,11 @@ var SOQL = [
   'psa_pm_Project_Category__c, psa_pm_Engagement_Type__c,',
   'psa_tm_Last_Time_Entry_Date__c, PSA_Adoption_Event_Not_Required_Reason__c,',
   'pse_pm_Last_Customer_Survey_Created__c, PSA_Status_report_on_Project__c,',
-  'psa_pm_Project_Sub_Type__c',
+  'psa_pm_Project_Sub_Type__c,',
+  // Adoption Events sub-query — Status + Due Date for each event on the project
+  '(SELECT Id, pse__Status__c, pse__Due_Date__c FROM pse__Adoption_Events__r),',
+  // Milestones sub-query — only billable milestones
+  '(SELECT Id, Name, pse__Due_Date__c, pse__Billable__c FROM pse__Milestones__r WHERE pse__Billable__c = true)',
   'FROM pse__Proj__c',
   "WHERE pse__Project_Manager__c IN (" + DM_IDS.map(function (id) { return "'" + id + "'"; }).join(',') + ")",
   "AND pse__Stage__c = 'In Progress'",
