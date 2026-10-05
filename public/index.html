@@ -348,6 +348,13 @@ function hasBillableMilestoneDueSoon(p) {
 }
 // Helper: is this an internal/non-billable project?
 function isInternal(p) {
+  // Exclude by stage
+  var badStages = ['completed','cancelled','canceled','on hold','closed'];
+  if (badStages.indexOf((p.pse__Stage__c || '').toLowerCase()) !== -1) return true;
+  // Exclude by practice name
+  var practice = (p.pse__Practice__r && p.pse__Practice__r.Name) ? p.pse__Practice__r.Name.toLowerCase() : '';
+  if (practice === 'internal') return true;
+  // Exclude by project category
   var cat = (p.psa_pm_Project_Category__c || '').toLowerCase();
   return cat === 'productive non - billable' || cat === 'internal';
 }
