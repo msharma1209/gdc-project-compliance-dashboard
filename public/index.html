@@ -21,55 +21,40 @@
     --radius:   10px;
   }
   html { font-size: 14px; }
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-    min-height: 100vh;
-    line-height: 1.5;
-  }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; min-height: 100vh; line-height: 1.5; }
   a { color: #7ca4f4; text-decoration: none; }
   a:hover { text-decoration: underline; }
+
+  /* ── Header ── */
   #app-header {
     position: sticky; top: 0; z-index: 100;
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    padding: 0 24px;
-    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
-    min-height: 56px;
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 0 24px; display: flex; align-items: center; gap: 16px;
+    flex-wrap: wrap; min-height: 56px;
   }
-  #app-header h1 { font-size: 1.15rem; font-weight: 700; white-space: nowrap; letter-spacing: -0.2px; }
-  .header-dms { display: flex; gap: 8px; flex-wrap: wrap; flex: 1; }
-  .header-dm-chip { display: flex; align-items: center; gap: 5px; font-size: 0.78rem; color: var(--muted); white-space: nowrap; }
-  .dm-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
+  #app-header h1 { font-size: 1.15rem; font-weight: 700; white-space: nowrap; letter-spacing: -0.2px; flex: 1; }
   .header-actions { display: flex; align-items: center; gap: 10px; margin-left: auto; }
-  #refresh-btn {
-    background: var(--border); color: var(--text); border: 1px solid var(--border);
-    border-radius: 6px; padding: 5px 14px; font-size: 0.82rem; cursor: pointer;
-    transition: background 0.15s; display: flex; align-items: center; gap: 5px;
-  }
+  #refresh-btn { background: var(--border); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 5px 14px; font-size: 0.82rem; cursor: pointer; transition: background 0.15s; display: flex; align-items: center; gap: 5px; }
   #refresh-btn:hover { background: #3b4168; }
   #refresh-btn.loading { opacity: 0.6; cursor: not-allowed; }
   #last-refresh { font-size: 0.75rem; color: var(--muted); white-space: nowrap; }
   #data-source-badge { font-size: 0.7rem; padding: 2px 8px; border-radius: 20px; font-weight: 600; }
   .badge-live    { background: rgba(34,197,94,0.15);  color: var(--green);  border: 1px solid rgba(34,197,94,0.3); }
   .badge-bundled { background: rgba(245,158,11,0.15); color: var(--yellow); border: 1px solid rgba(245,158,11,0.3); }
-  #dm-filter-bar {
-    display: flex; gap: 8px; padding: 12px 24px;
-    background: var(--bg); border-bottom: 1px solid var(--border);
-    flex-wrap: wrap; align-items: center;
-  }
-  .dm-filter-btn {
-    display: flex; align-items: center; gap: 6px; padding: 6px 14px;
-    border-radius: 20px; border: 1px solid var(--border);
-    background: var(--surface); color: var(--muted); font-size: 0.8rem;
-    cursor: pointer; transition: all 0.15s; font-weight: 500; font-family: inherit;
-  }
+
+  /* ── DM Filter Bar ── */
+  #dm-filter-bar { display: flex; gap: 8px; padding: 12px 24px; background: var(--bg); border-bottom: 1px solid var(--border); flex-wrap: wrap; align-items: center; }
+  .dm-filter-btn { display: flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface); color: var(--muted); font-size: 0.8rem; cursor: pointer; transition: all 0.15s; font-weight: 500; font-family: inherit; }
   .dm-filter-btn:hover { border-color: #5b6cf9; color: var(--text); }
   .dm-filter-btn.active { color: var(--text); background: var(--surface2); }
   .dm-filter-btn[data-dm="all"].active { border-color: #5b6cf9; color: #a5b4fc; background: rgba(91,108,249,0.1); }
+  .dm-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
+
+  /* ── Main Layout ── */
   #main { max-width: 1600px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; gap: 28px; }
   .section-header { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 12px; }
+
+  /* ── KPI Grid ── */
   #kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(175px, 1fr)); gap: 12px; }
   .kpi-card {
     background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
@@ -81,12 +66,15 @@
   .kpi-card.border-red::before    { background: var(--red); }
   .kpi-card.border-yellow::before { background: var(--yellow); }
   .kpi-card.border-blue::before   { background: var(--blue); }
-  .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.4); }
-  .kpi-card.selected { box-shadow: 0 0 0 2px #f59e0b, 0 6px 20px rgba(0,0,0,0.4); }
+  .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.4); border-color: #5b6cf9; }
+  .kpi-card.placeholder-card { cursor: default; opacity: 0.6; }
+  .kpi-card.placeholder-card:hover { transform: none; box-shadow: none; border-color: var(--border); }
   .kpi-icon  { font-size: 1.4rem; margin-bottom: 8px; display: block; line-height: 1; }
   .kpi-label { font-size: 0.72rem; color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; line-height: 1.3; }
   .kpi-value { font-size: 2rem; font-weight: 700; line-height: 1; color: var(--text); }
   .kpi-note  { font-size: 0.68rem; color: var(--muted); margin-top: 4px; }
+
+  /* ── Charts Row ── */
   #charts-row { display: grid; grid-template-columns: 1fr 2fr 2fr; gap: 16px; }
   .chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
   .chart-title { font-size: 0.78rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 14px; }
@@ -94,16 +82,18 @@
   #chart-doughnut-wrap { height: 200px; display: flex; align-items: center; justify-content: center; }
   #chart-health-wrap   { height: 220px; }
   #chart-complete-wrap { height: 220px; }
-  #table-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
-  #search-box {
+
+  /* ── Table shared styles ── */
+  #table-controls, #detail-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+  #search-box, #detail-search-box {
     background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
     padding: 7px 12px 7px 32px; color: var(--text); font-size: 0.82rem; width: 280px;
     outline: none; transition: border-color 0.15s;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238892aa' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");
     background-repeat: no-repeat; background-position: 10px center; font-family: inherit;
   }
-  #search-box:focus { border-color: #5b6cf9; }
-  #row-count { font-size: 0.78rem; color: var(--muted); margin-left: auto; }
+  #search-box:focus, #detail-search-box:focus { border-color: #5b6cf9; }
+  #row-count, #detail-row-count { font-size: 0.78rem; color: var(--muted); margin-left: auto; }
   .table-wrap { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border); }
   table { width: 100%; border-collapse: collapse; min-width: 1100px; }
   thead tr { background: var(--surface2); border-bottom: 1px solid var(--border); }
@@ -117,7 +107,6 @@
   td { padding: 10px 12px; font-size: 0.8rem; vertical-align: middle; }
   tr.row-alert-red    { outline: 2px solid rgba(239,68,68,0.55);  outline-offset: -2px; }
   tr.row-alert-yellow { outline: 2px solid rgba(245,158,11,0.45); outline-offset: -2px; }
-  tr.kpi-highlight    { outline: 2px solid #f59e0b !important; outline-offset: -2px; background: rgba(245,158,11,0.06) !important; }
   .status-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; white-space: nowrap; }
   .pill-green  { background: rgba(34,197,94,0.15);   color: #4ade80; }
   .pill-yellow { background: rgba(245,158,11,0.15);  color: #fbbf24; }
@@ -136,15 +125,43 @@
   .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid rgba(255,255,255,0.2); border-top-color: var(--text); border-radius: 50%; animation: spin 0.6s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .empty-row td { text-align: center; padding: 32px; color: var(--muted); font-size: 0.85rem; }
+
+  /* ── Detail View ── */
+  #detail-view { display: none; max-width: 1600px; margin: 0 auto; padding: 24px; }
+  #detail-banner {
+    display: flex; align-items: center; gap: 16px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px 24px; margin-bottom: 24px;
+  }
+  #back-btn {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+    border-radius: 6px; padding: 7px 14px; font-size: 0.82rem; cursor: pointer;
+    transition: background 0.15s; font-family: inherit; white-space: nowrap; flex-shrink: 0;
+  }
+  #back-btn:hover { background: #3b4168; border-color: #5b6cf9; }
+  #detail-kpi-icon { font-size: 2.2rem; line-height: 1; flex-shrink: 0; }
+  #detail-kpi-info { flex: 1; }
+  #detail-kpi-title { font-size: 1.25rem; font-weight: 700; color: var(--text); }
+  #detail-kpi-sub   { font-size: 0.82rem; color: var(--muted); margin-top: 2px; }
+  #detail-kpi-badge {
+    font-size: 2rem; font-weight: 700; color: var(--text);
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 10px 20px; text-align: center;
+    min-width: 80px; flex-shrink: 0;
+  }
+  #detail-kpi-badge small { display: block; font-size: 0.65rem; color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+
+  /* Responsive */
   @media (max-width: 1100px) { #charts-row { grid-template-columns: 1fr 1fr; } #charts-row .chart-card:first-child { grid-column: span 2; } #chart-doughnut-wrap { height: 160px; } }
-  @media (max-width: 700px) { #charts-row { grid-template-columns: 1fr; } #charts-row .chart-card:first-child { grid-column: span 1; } #main { padding: 12px; } #app-header, #dm-filter-bar { padding-left: 12px; padding-right: 12px; } }
+  @media (max-width: 700px) { #charts-row { grid-template-columns: 1fr; } #charts-row .chart-card:first-child { grid-column: span 1; } #main, #detail-view { padding: 12px; } #app-header, #dm-filter-bar { padding-left: 12px; padding-right: 12px; } #detail-banner { flex-wrap: wrap; } }
 </style>
 </head>
 <body>
 
+<!-- Sticky Header (title only — no DM names) -->
 <header id="app-header">
   <h1>&#128202; Informatica Practice &ndash; GDC Project Compliance Dashboard</h1>
-  <div class="header-dms" id="header-dms"></div>
   <div class="header-actions">
     <span id="data-source-badge" class="badge-bundled">BUNDLED</span>
     <span id="last-refresh"></span>
@@ -152,6 +169,7 @@
   </div>
 </header>
 
+<!-- DM Filter Bar (only shown in main view) -->
 <div id="dm-filter-bar">
   <button class="dm-filter-btn active" data-dm="all">
     <span class="dm-dot" style="background:#5b6cf9;"></span>
@@ -159,45 +177,74 @@
   </button>
 </div>
 
-<div id="main">
-  <section id="kpi-section">
-    <div class="section-header">Key Performance Indicators</div>
-    <div id="kpi-grid"></div>
-  </section>
-  <section id="charts-section">
-    <div class="section-header">Analytics</div>
-    <div id="charts-row">
-      <div class="chart-card">
-        <div class="chart-title">Overall Status Trend</div>
-        <div class="chart-wrap" id="chart-doughnut-wrap"><canvas id="chart-doughnut"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <div class="chart-title">Health Indicators</div>
-        <div class="chart-wrap" id="chart-health-wrap"><canvas id="chart-health"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <div class="chart-title">% Complete Distribution</div>
-        <div class="chart-wrap" id="chart-complete-wrap"><canvas id="chart-complete"></canvas></div>
-      </div>
+<!-- ═══ DETAIL VIEW ═══ -->
+<div id="detail-view">
+  <div id="detail-banner">
+    <button id="back-btn">&#8592; Back to Dashboard</button>
+    <span id="detail-kpi-icon"></span>
+    <div id="detail-kpi-info">
+      <div id="detail-kpi-title"></div>
+      <div id="detail-kpi-sub"></div>
     </div>
-  </section>
-  <section id="table-section">
-    <div class="section-header">Project Details</div>
-    <div id="table-controls">
-      <input id="search-box" type="text" placeholder="Search project, account, DM..." autocomplete="off">
-      <span id="row-count"></span>
+    <div id="detail-kpi-badge">
+      <span id="detail-kpi-count"></span>
+      <small>Projects</small>
     </div>
-    <div class="table-wrap">
-      <table id="project-table">
-        <thead><tr id="table-head"></tr></thead>
-        <tbody id="table-body"></tbody>
-      </table>
-    </div>
-  </section>
+  </div>
+  <div id="detail-controls">
+    <input id="detail-search-box" type="text" placeholder="Search project, account, DM..." autocomplete="off">
+    <span id="detail-row-count"></span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr id="detail-head"></tr></thead>
+      <tbody id="detail-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══ MAIN VIEW ═══ -->
+<div id="main-view">
+  <div id="main">
+    <section id="kpi-section">
+      <div class="section-header">Key Performance Indicators — click any tile to view matching projects</div>
+      <div id="kpi-grid"></div>
+    </section>
+    <section id="charts-section">
+      <div class="section-header">Analytics</div>
+      <div id="charts-row">
+        <div class="chart-card">
+          <div class="chart-title">Overall Status Trend</div>
+          <div class="chart-wrap" id="chart-doughnut-wrap"><canvas id="chart-doughnut"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Health Indicators</div>
+          <div class="chart-wrap" id="chart-health-wrap"><canvas id="chart-health"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">% Complete Distribution</div>
+          <div class="chart-wrap" id="chart-complete-wrap"><canvas id="chart-complete"></canvas></div>
+        </div>
+      </div>
+    </section>
+    <section id="table-section">
+      <div class="section-header">All Projects</div>
+      <div id="table-controls">
+        <input id="search-box" type="text" placeholder="Search project, account, DM..." autocomplete="off">
+        <span id="row-count"></span>
+      </div>
+      <div class="table-wrap">
+        <table id="project-table">
+          <thead><tr id="table-head"></tr></thead>
+          <tbody id="table-body"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
 </div>
 
 <script>
-/* ── helpers ── */
+/* ── util ── */
 function clearEl(el) { while (el.firstChild) el.removeChild(el.firstChild); }
 
 /* ── CONSTANTS ── */
@@ -239,265 +286,153 @@ var BUNDLED_DATA = [
 var state = {
   allProjects: [], filtered: [], displayed: [],
   activeDM: 'all', searchQuery: '', sortCol: null, sortDir: 'asc',
-  activeKPI: null, kpiMatches: [], dataSource: 'bundled',
-  charts: { doughnut: null, health: null, complete: null }
+  dataSource: 'bundled',
+  charts: { doughnut: null, health: null, complete: null },
+  detail: { projects: [], displayed: [], searchQuery: '', sortCol: null, sortDir: 'asc', kpi: null }
 };
 
 /* ── HELPERS ── */
 function parseDate(str) {
   if (!str) return null;
-  var p = str.split('-');
-  if (p.length !== 3) return null;
+  var p = str.split('-'); if (p.length !== 3) return null;
   return new Date(Date.UTC(+p[0], +p[1]-1, +p[2], 12, 0, 0));
 }
-function daysDiff(d1, d2) { return Math.round((d1.getTime() - d2.getTime()) / 86400000); }
+function daysDiff(d1, d2) { return Math.round((d1.getTime()-d2.getTime())/86400000); }
 function fmtDate(str) {
-  if (!str) return '—';
-  var d = parseDate(str); if (!d) return '—';
-  var m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  return d.getUTCDate() + ' ' + m[d.getUTCMonth()] + ' ' + String(d.getUTCFullYear()).slice(2);
+  if (!str) return '—'; var d = parseDate(str); if (!d) return '—';
+  var m=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return d.getUTCDate()+' '+m[d.getUTCMonth()]+' '+String(d.getUTCFullYear()).slice(2);
 }
-function fmtNum(n) { return (n === null || n === undefined) ? '—' : Number(n).toLocaleString(); }
+function fmtNum(n) { return (n===null||n===undefined) ? '—' : Number(n).toLocaleString(); }
 function pillClass(val) {
-  if (!val) return 'pill-gray';
-  var v = val.toLowerCase();
-  return v === 'green' ? 'pill-green' : v === 'yellow' ? 'pill-yellow' : v === 'red' ? 'pill-red' : 'pill-gray';
+  if (!val) return 'pill-gray'; var v=val.toLowerCase();
+  return v==='green'?'pill-green':v==='yellow'?'pill-yellow':v==='red'?'pill-red':'pill-gray';
 }
 function makePill(val) {
-  var span = document.createElement('span');
-  span.className = 'status-pill ' + pillClass(val);
-  var dot = document.createElement('span'); dot.textContent = '●'; dot.style.fontSize = '0.6rem';
-  span.appendChild(dot);
-  span.appendChild(document.createTextNode(' ' + (val || 'N/A')));
-  return span;
+  var span=document.createElement('span'); span.className='status-pill '+pillClass(val);
+  var dot=document.createElement('span'); dot.textContent='●'; dot.style.fontSize='0.6rem';
+  span.appendChild(dot); span.appendChild(document.createTextNode(' '+(val||'N/A'))); return span;
 }
 
 /* ── KPI DEFINITIONS ── */
 var KPI_DEFS = [
-  { id:'total',            label:'Total Active Projects',    icon:'📁', border:'green',  match: function() { return true; } },
-  { id:'no_status',        label:'No Status Updated',        icon:'⚪',       border:'yellow', match: function(p) { return !p.pse__Project_Status__c; } },
-  { id:'missing_reports',  label:'Missing Status Reports',   icon:'📋', border:'yellow', match: function(p) { return p.PSA_Status_report_on_Project__c === false && !p.PSA_PM_Last_Project_Status_Report_Week__c; } },
-  { id:'red_status',       label:'Red Status',               icon:'🔴', border:'red',    match: function(p) { return p.pse__Project_Status__c === 'Red' || p.psa_Overall_Project_Status_Trend__c === 'Red'; } },
-  { id:'past_end',         label:'Past End Date',            icon:'📅', border:'red',    match: function(p) { var d = parseDate(p.pse__End_Date__c); return d && d < TODAY; } },
-  { id:'ending_oct',       label:'Ending by Oct 2026',       icon:'⏳',       border:'yellow',
-    match: function(p) { var d = parseDate(p.pse__End_Date__c); var oct = new Date(Date.UTC(2026,9,31,12,0,0)); return d && d >= TODAY && d <= oct; } },
-  { id:'low_margin',       label:'Low Margin (<50%)',        icon:'💸', border:'red',    match: function(p) { return p.psa_pm_PercentComplete__c !== null && p.psa_pm_PercentComplete__c !== undefined && p.psa_pm_PercentComplete__c < 50; } },
+  { id:'total',            label:'Total Active Projects',    icon:'📁', border:'green',
+    desc:'All active In Progress projects',
+    match: function() { return true; } },
+  { id:'no_status',        label:'No Status Updated',        icon:'⚪',  border:'yellow',
+    desc:'Projects with no overall status set',
+    match: function(p) { return !p.pse__Project_Status__c; } },
+  { id:'missing_reports',  label:'Missing Status Reports',   icon:'📋', border:'yellow',
+    desc:'Status report not submitted this week',
+    match: function(p) { return p.PSA_Status_report_on_Project__c===false && !p.PSA_PM_Last_Project_Status_Report_Week__c; } },
+  { id:'red_status',       label:'Red Status',               icon:'🔴', border:'red',
+    desc:'Projects with Red overall status or trend',
+    match: function(p) { return p.pse__Project_Status__c==='Red'||p.psa_Overall_Project_Status_Trend__c==='Red'; } },
+  { id:'past_end',         label:'Past End Date',            icon:'📅', border:'red',
+    desc:'Projects whose end date has already passed',
+    match: function(p) { var d=parseDate(p.pse__End_Date__c); return d&&d<TODAY; } },
+  { id:'ending_oct',       label:'Ending by Oct 2026',       icon:'⏳',  border:'yellow',
+    desc:'Projects ending on or before 31 Oct 2026',
+    match: function(p) { var d=parseDate(p.pse__End_Date__c); var oct=new Date(Date.UTC(2026,9,31,12,0,0)); return d&&d>=TODAY&&d<=oct; } },
+  { id:'low_margin',       label:'Low Margin (<50%)',        icon:'💸', border:'red',
+    desc:'Projects with less than 50% completion',
+    match: function(p) { return p.psa_pm_PercentComplete__c!==null&&p.psa_pm_PercentComplete__c!==undefined&&p.psa_pm_PercentComplete__c<50; } },
   { id:'timecard',         label:'Timecard >30 Days',        icon:'🕐', border:'red',
-    match: function(p) { if (!p.psa_tm_Last_Time_Entry_Date__c) return true; var d = parseDate(p.psa_tm_Last_Time_Entry_Date__c); return d && daysDiff(TODAY, d) > 30; } },
-  { id:'zero_hours',       label:'0 Planned Hours',          icon:'⏱️', border:'yellow', match: function(p) { return !p.pse__Planned_Hours__c || p.pse__Planned_Hours__c === 0; } },
-  { id:'planned_lt_billed',label:'Planned < Billed',         icon:'⚠️', border:'yellow', match: function(p) { return p.PSA_PM_Total_Billable_Hours_Remaining__c !== null && p.PSA_PM_Total_Billable_Hours_Remaining__c < 0; } },
-  { id:'no_category',      label:'Project Categorization',   icon:'🗂️', border:'yellow', match: function(p) { return !p.psa_pm_Project_Sub_Type__c; } },
-  { id:'adoption_upcoming',label:'Upcoming Adoption Events', icon:'🎯', border:'blue',   match: function(p) { return !p.PSA_Adoption_Event_Not_Required_Reason__c; } },
-  { id:'adoption_missing', label:'Missing Adoption Events',  icon:'❌',       border:'red',    match: function(p) { return !p.PSA_Adoption_Event_Not_Required_Reason__c && p.psa_pm_Project_Category__c !== 'Productive Non - Billable'; } },
-  { id:'missing_csat',     label:'Missing CSAT',             icon:'⭐',       border:'yellow', match: function(p) { return !p.pse_pm_Last_Customer_Survey_Created__c; } },
-  { id:'milestones',       label:'Milestones Due',           icon:'🏁', border:'yellow', placeholder: true, match: function() { return false; } }
+    desc:'No time entry logged in the last 30 days',
+    match: function(p) { if(!p.psa_tm_Last_Time_Entry_Date__c) return true; var d=parseDate(p.psa_tm_Last_Time_Entry_Date__c); return d&&daysDiff(TODAY,d)>30; } },
+  { id:'zero_hours',       label:'0 Planned Hours',          icon:'⏱️', border:'yellow',
+    desc:'Projects with zero planned hours',
+    match: function(p) { return !p.pse__Planned_Hours__c||p.pse__Planned_Hours__c===0; } },
+  { id:'planned_lt_billed',label:'Planned < Billed',         icon:'⚠️', border:'yellow',
+    desc:'Billable hours remaining is negative',
+    match: function(p) { return p.PSA_PM_Total_Billable_Hours_Remaining__c!==null&&p.PSA_PM_Total_Billable_Hours_Remaining__c<0; } },
+  { id:'no_category',      label:'Project Categorization',   icon:'🗂️', border:'yellow',
+    desc:'Projects missing a Sub-Type categorization',
+    match: function(p) { return !p.psa_pm_Project_Sub_Type__c; } },
+  { id:'adoption_upcoming',label:'Upcoming Adoption Events', icon:'🎯', border:'blue',
+    desc:'Projects with no adoption event exemption reason',
+    match: function(p) { return !p.PSA_Adoption_Event_Not_Required_Reason__c; } },
+  { id:'adoption_missing', label:'Missing Adoption Events',  icon:'❌',  border:'red',
+    desc:'Billable projects missing adoption event reason',
+    match: function(p) { return !p.PSA_Adoption_Event_Not_Required_Reason__c&&p.psa_pm_Project_Category__c!=='Productive Non - Billable'; } },
+  { id:'missing_csat',     label:'Missing CSAT',             icon:'⭐',  border:'yellow',
+    desc:'No customer satisfaction survey on record',
+    match: function(p) { return !p.pse_pm_Last_Customer_Survey_Created__c; } },
+  { id:'milestones',       label:'Milestones Due',           icon:'🏁', border:'yellow',
+    placeholder: true,
+    desc:'Requires Milestone object data (not yet available)',
+    match: function() { return false; } }
 ];
 
-/* ── FETCH: calls server proxy /api/projects ── */
+/* ── FETCH ── */
 function fetchLiveData() {
-  var btn = document.getElementById('refresh-btn');
-  btn.classList.add('loading');
-  clearEl(btn);
-  var sp = document.createElement('span'); sp.className = 'spinner';
-  btn.appendChild(sp);
+  var btn=document.getElementById('refresh-btn');
+  btn.classList.add('loading'); clearEl(btn);
+  var sp=document.createElement('span'); sp.className='spinner'; btn.appendChild(sp);
   btn.appendChild(document.createTextNode(' Fetching…'));
-
   return fetch('/api/projects')
-    .then(function(res) { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
-    .then(function(data) {
-      var records = (data && data.records) ? data.records : [];
-      if (records.length === 0) throw new Error('Empty result');
-      btn.classList.remove('loading');
-      clearEl(btn); btn.textContent = '↺ Refresh';
-      return { records: records, source: 'live' };
+    .then(function(res){ if(!res.ok) throw new Error('HTTP '+res.status); return res.json(); })
+    .then(function(data){
+      var records=(data&&data.records)?data.records:[];
+      if(records.length===0) throw new Error('Empty result');
+      btn.classList.remove('loading'); clearEl(btn); btn.textContent='↺ Refresh';
+      return {records:records,source:'live'};
     })
-    .catch(function(err) {
-      console.warn('Live fetch failed (' + err.message + '), using bundled data.');
-      btn.classList.remove('loading');
-      clearEl(btn); btn.textContent = '↺ Refresh';
-      return { records: BUNDLED_DATA, source: 'bundled' };
+    .catch(function(err){
+      console.warn('Live fetch failed ('+err.message+'), using bundled data.');
+      btn.classList.remove('loading'); clearEl(btn); btn.textContent='↺ Refresh';
+      return {records:BUNDLED_DATA,source:'bundled'};
     });
 }
 
-/* ── FILTER & SORT ── */
+/* ── FILTER / SORT (main) ── */
 function applyDMFilter() {
-  state.filtered = state.activeDM === 'all'
-    ? state.allProjects.slice()
-    : state.allProjects.filter(function(p) { return p.pse__Project_Manager__c === state.activeDM; });
+  state.filtered = state.activeDM==='all' ? state.allProjects.slice()
+    : state.allProjects.filter(function(p){ return p.pse__Project_Manager__c===state.activeDM; });
 }
 function applySearchFilter() {
-  var q = state.searchQuery.toLowerCase().trim();
-  if (!q) { state.displayed = state.filtered.slice(); return; }
-  state.displayed = state.filtered.filter(function(p) {
-    var acc = (p.pse__Account__r && p.pse__Account__r.Name) ? p.pse__Account__r.Name : '';
-    var dm  = (p.pse__Project_Manager__r && p.pse__Project_Manager__r.Name) ? p.pse__Project_Manager__r.Name : '';
-    return (p.Name||'').toLowerCase().indexOf(q) !== -1 || acc.toLowerCase().indexOf(q) !== -1 || dm.toLowerCase().indexOf(q) !== -1;
+  var q=state.searchQuery.toLowerCase().trim();
+  if(!q){ state.displayed=state.filtered.slice(); return; }
+  state.displayed=state.filtered.filter(function(p){
+    var acc=(p.pse__Account__r&&p.pse__Account__r.Name)?p.pse__Account__r.Name:'';
+    var dm=(p.pse__Project_Manager__r&&p.pse__Project_Manager__r.Name)?p.pse__Project_Manager__r.Name:'';
+    return (p.Name||'').toLowerCase().indexOf(q)!==-1||acc.toLowerCase().indexOf(q)!==-1||dm.toLowerCase().indexOf(q)!==-1;
   });
 }
-function getSortValue(p, col) {
-  switch(col) {
+function getSortVal(p,col){
+  switch(col){
     case 'name':      return (p.Name||'').toLowerCase();
     case 'account':   return ((p.pse__Account__r&&p.pse__Account__r.Name)||'').toLowerCase();
     case 'dm':        return ((p.pse__Project_Manager__r&&p.pse__Project_Manager__r.Name)||'').toLowerCase();
     case 'status':    return p.pse__Project_Status__c||'';
-    case 'pct':       return p.psa_pm_PercentComplete__c != null ? p.psa_pm_PercentComplete__c : -1;
+    case 'pct':       return p.psa_pm_PercentComplete__c!=null?p.psa_pm_PercentComplete__c:-1;
     case 'enddate':   return p.pse__End_Date__c||'';
     case 'financial': return p.pse__Financial_Status__c||'';
     case 'schedule':  return p.pse__Schedule_Status__c||'';
     case 'resources': return p.PSA_PM_Resources__c||'';
-    case 'hrsleft':   return p.PSA_PM_Total_Billable_Hours_Remaining__c != null ? p.PSA_PM_Total_Billable_Hours_Remaining__c : -99999;
+    case 'hrsleft':   return p.PSA_PM_Total_Billable_Hours_Remaining__c!=null?p.PSA_PM_Total_Billable_Hours_Remaining__c:-99999;
     case 'subtype':   return p.psa_pm_Project_Sub_Type__c||'';
     case 'portfolio': return ((p.psa_pm_Portfolio_Manager__r&&p.psa_pm_Portfolio_Manager__r.Name)||'').toLowerCase();
     default: return '';
   }
 }
-function applySort() {
-  if (!state.sortCol) return;
-  var col = state.sortCol, dir = state.sortDir === 'asc' ? 1 : -1;
-  state.displayed.sort(function(a,b) {
-    var av = getSortValue(a,col), bv = getSortValue(b,col);
-    if (av==null) return 1; if (bv==null) return -1;
-    return av < bv ? -dir : av > bv ? dir : 0;
-  });
+function applySort(list, col, dir) {
+  if(!col) return; var d=dir==='asc'?1:-1;
+  list.sort(function(a,b){ var av=getSortVal(a,col),bv=getSortVal(b,col); if(av==null)return 1; if(bv==null)return -1; return av<bv?-d:av>bv?d:0; });
 }
 
 /* ── ROW ALERT ── */
-function rowAlertClass(p) {
-  var ed = parseDate(p.pse__End_Date__c);
-  var pastEnd   = ed && ed < TODAY;
-  var redStatus = p.pse__Project_Status__c === 'Red' || p.psa_Overall_Project_Status_Trend__c === 'Red';
-  var lateTcard = !p.psa_tm_Last_Time_Entry_Date__c || (function(){
-    var d = parseDate(p.psa_tm_Last_Time_Entry_Date__c); return d && daysDiff(TODAY,d) > 30;
-  })();
-  if (pastEnd || redStatus || lateTcard) return 'row-alert-red';
-  if (!p.pse__Project_Status__c || !p.pse__Planned_Hours__c || p.pse__Planned_Hours__c === 0) return 'row-alert-yellow';
+function rowAlertClass(p){
+  var ed=parseDate(p.pse__End_Date__c);
+  var pastEnd=ed&&ed<TODAY;
+  var red=p.pse__Project_Status__c==='Red'||p.psa_Overall_Project_Status_Trend__c==='Red';
+  var late=!p.psa_tm_Last_Time_Entry_Date__c||(function(){ var d=parseDate(p.psa_tm_Last_Time_Entry_Date__c); return d&&daysDiff(TODAY,d)>30; })();
+  if(pastEnd||red||late) return 'row-alert-red';
+  if(!p.pse__Project_Status__c||!p.pse__Planned_Hours__c||p.pse__Planned_Hours__c===0) return 'row-alert-yellow';
   return '';
 }
 
-/* ── RENDER: HEADER DMs ── */
-function renderHeaderDMs() {
-  var c = document.getElementById('header-dms');
-  clearEl(c);
-  DELIVERY_MANAGERS.forEach(function(dm) {
-    var chip = document.createElement('span'); chip.className = 'header-dm-chip';
-    var dot = document.createElement('span'); dot.className = 'dm-dot'; dot.style.background = dm.color;
-    chip.appendChild(dot);
-    chip.appendChild(document.createTextNode(dm.name));
-    c.appendChild(chip);
-  });
-}
-
-/* ── RENDER: DM FILTER BAR ── */
-function renderDMFilterBar() {
-  var bar = document.getElementById('dm-filter-bar');
-  Array.prototype.slice.call(bar.querySelectorAll('[data-dm]:not([data-dm="all"])')).forEach(function(el){ el.remove(); });
-  var allBtn = bar.querySelector('[data-dm="all"]');
-  allBtn.className = 'dm-filter-btn' + (state.activeDM === 'all' ? ' active' : '');
-  DELIVERY_MANAGERS.forEach(function(dm) {
-    var btn = document.createElement('button');
-    var isActive = state.activeDM === dm.id;
-    btn.className = 'dm-filter-btn' + (isActive ? ' active' : '');
-    btn.setAttribute('data-dm', dm.id);
-    if (isActive) { btn.style.borderColor = dm.color; btn.style.color = dm.color; }
-    var dot = document.createElement('span'); dot.className = 'dm-dot'; dot.style.background = dm.color;
-    btn.appendChild(dot);
-    btn.appendChild(document.createTextNode(dm.name));
-    btn.addEventListener('click', function() {
-      state.activeDM = dm.id; state.activeKPI = null; state.kpiMatches = []; refreshAll();
-    });
-    bar.appendChild(btn);
-  });
-}
-
-/* ── RENDER: KPI GRID ── */
-function renderKPIs() {
-  var grid = document.getElementById('kpi-grid');
-  clearEl(grid);
-  KPI_DEFS.forEach(function(kpi, idx) {
-    var card = document.createElement('div');
-    card.className = 'kpi-card border-' + kpi.border + (state.activeKPI === idx ? ' selected' : '');
-    var icon  = document.createElement('span'); icon.className = 'kpi-icon';  icon.textContent = kpi.icon;
-    var label = document.createElement('div');  label.className = 'kpi-label'; label.textContent = kpi.label;
-    var val   = document.createElement('div');  val.className = 'kpi-value';
-    if (kpi.placeholder) {
-      val.textContent = '—';
-      var note = document.createElement('div'); note.className = 'kpi-note'; note.textContent = 'Requires Milestone data';
-      card.appendChild(icon); card.appendChild(label); card.appendChild(val); card.appendChild(note);
-    } else {
-      val.textContent = String(state.filtered.filter(kpi.match).length);
-      card.appendChild(icon); card.appendChild(label); card.appendChild(val);
-      card.addEventListener('click', function() {
-        if (state.activeKPI === idx) { state.activeKPI = null; state.kpiMatches = []; }
-        else { state.activeKPI = idx; state.kpiMatches = state.filtered.filter(kpi.match).map(function(p){ return p.Id; }); }
-        renderKPIs(); renderTableBody();
-      });
-    }
-    grid.appendChild(card);
-  });
-}
-
-/* ── RENDER: CHARTS ── */
-function renderDoughnutChart() {
-  var counts = { Green:0, Yellow:0, Red:0, 'Not Set':0 };
-  state.filtered.forEach(function(p) {
-    var t = p.psa_Overall_Project_Status_Trend__c || p.pse__Project_Status__c;
-    if (!t) counts['Not Set']++;
-    else if (t==='Green') counts.Green++;
-    else if (t==='Yellow') counts.Yellow++;
-    else if (t==='Red') counts.Red++;
-    else counts['Not Set']++;
-  });
-  var data = [counts.Green, counts.Yellow, counts.Red, counts['Not Set']];
-  if (state.charts.doughnut) { state.charts.doughnut.data.datasets[0].data = data; state.charts.doughnut.update('none'); return; }
-  var ctx = document.getElementById('chart-doughnut').getContext('2d');
-  state.charts.doughnut = new Chart(ctx, {
-    type: 'doughnut',
-    data: { labels: ['Green','Yellow','Red','Not Set'], datasets: [{ data: data, backgroundColor: ['#22c55e','#f59e0b','#ef4444','#4b5563'], borderWidth: 2, borderColor: '#1a1d27', hoverBorderColor: '#fff' }] },
-    options: { responsive:true, maintainAspectRatio:false, cutout:'65%',
-      plugins: { legend: { position:'bottom', labels: { color:'#8892aa', font:{size:11}, padding:8, boxWidth:10 } },
-        tooltip: { callbacks: { label: function(c){ return ' '+c.label+': '+c.raw; } } } } }
-  });
-}
-function renderHealthChart() {
-  var fields = ['pse__Financial_Status__c','pse__Schedule_Status__c','pse__Scope_Status__c'];
-  var g=[0,0,0],y=[0,0,0],r=[0,0,0],n=[0,0,0];
-  state.filtered.forEach(function(p) {
-    fields.forEach(function(f,i) {
-      var v=p[f]; if(!v) n[i]++; else if(v==='Green') g[i]++; else if(v==='Yellow') y[i]++; else if(v==='Red') r[i]++; else n[i]++;
-    });
-  });
-  var ds = [
-    {label:'Green', data:g, backgroundColor:'rgba(34,197,94,0.75)'},
-    {label:'Yellow',data:y, backgroundColor:'rgba(245,158,11,0.75)'},
-    {label:'Red',   data:r, backgroundColor:'rgba(239,68,68,0.75)'},
-    {label:'N/A',   data:n, backgroundColor:'rgba(75,85,99,0.6)'}
-  ];
-  if (state.charts.health) { ds.forEach(function(d,i){ state.charts.health.data.datasets[i].data=d.data; }); state.charts.health.update('none'); return; }
-  var ctx = document.getElementById('chart-health').getContext('2d');
-  state.charts.health = new Chart(ctx, {
-    type:'bar', data:{ labels:['Financial','Schedule','Scope'], datasets:ds },
-    options:{ responsive:true, maintainAspectRatio:false,
-      scales:{ x:{stacked:true,ticks:{color:'#8892aa',font:{size:11}},grid:{color:'rgba(46,49,80,0.4)'}}, y:{stacked:true,ticks:{color:'#8892aa',font:{size:11},stepSize:1},grid:{color:'rgba(46,49,80,0.4)'}} },
-      plugins:{ legend:{ position:'bottom', labels:{color:'#8892aa',font:{size:11},padding:8,boxWidth:10} } } }
-  });
-}
-function renderCompleteChart() {
-  var projects = state.filtered.filter(function(p){ return p.psa_pm_PercentComplete__c != null; })
-    .slice().sort(function(a,b){ return b.psa_pm_PercentComplete__c-a.psa_pm_PercentComplete__c; }).slice(0,15);
-  var labels = projects.map(function(p){ var n=p.Name||''; return n.length>30 ? n.slice(0,28)+'…' : n; });
-  var data   = projects.map(function(p){ return p.psa_pm_PercentComplete__c; });
-  var colors = data.map(function(v){ return v>=75?'rgba(34,197,94,0.75)':v>=40?'rgba(59,130,246,0.75)':'rgba(245,158,11,0.75)'; });
-  if (state.charts.complete) { state.charts.complete.data.labels=labels; state.charts.complete.data.datasets[0].data=data; state.charts.complete.data.datasets[0].backgroundColor=colors; state.charts.complete.update('none'); return; }
-  var ctx = document.getElementById('chart-complete').getContext('2d');
-  state.charts.complete = new Chart(ctx, {
-    type:'bar', data:{ labels:labels, datasets:[{label:'% Complete',data:data,backgroundColor:colors,borderRadius:3}] },
-    options:{ responsive:true, maintainAspectRatio:false, indexAxis:'y',
-      scales:{ x:{min:0,max:100,ticks:{color:'#8892aa',font:{size:10},callback:function(v){return v+'%';}},grid:{color:'rgba(46,49,80,0.4)'}}, y:{ticks:{color:'#8892aa',font:{size:10}},grid:{display:false}} },
-      plugins:{ legend:{display:false}, tooltip:{callbacks:{label:function(c){return ' '+c.raw+'%';}} } } }
-  });
-}
-
-/* ── RENDER: TABLE HEADER ── */
+/* ── BUILD TABLE ROW (shared) ── */
 var COLUMNS = [
   {key:'name',      label:'Project Name',  sortable:true },
   {key:'account',   label:'Account',       sortable:true },
@@ -513,189 +448,336 @@ var COLUMNS = [
   {key:'subtype',   label:'Sub-Type',      sortable:true },
   {key:'portfolio', label:'Portfolio Mgr', sortable:true }
 ];
-function renderTableHeader() {
-  var tr = document.getElementById('table-head');
-  clearEl(tr);
-  COLUMNS.forEach(function(col) {
-    var th = document.createElement('th');
-    if (col.sortable) {
-      th.setAttribute('data-col', col.key);
-      if (state.sortCol === col.key) th.className = 'sort-' + state.sortDir;
-      th.addEventListener('click', function() {
-        state.sortDir = (state.sortCol===col.key && state.sortDir==='asc') ? 'desc' : 'asc';
-        state.sortCol = col.key;
-        renderTableHeader(); applySearchFilter(); applySort(); renderTableBody();
-      });
+
+function buildRow(p) {
+  var tr=document.createElement('tr'); tr.setAttribute('data-id',p.Id);
+  var ac=rowAlertClass(p); if(ac) tr.classList.add(ac);
+
+  // Project Name
+  var tdN=document.createElement('td'); tdN.style.maxWidth='260px';
+  var lnk=document.createElement('a');
+  lnk.href=SF_INSTANCE+'/lightning/r/pse__Proj__c/'+p.Id+'/view';
+  lnk.target='_blank'; lnk.rel='noopener noreferrer';
+  var nm=p.Name||'—'; lnk.textContent=nm.length>45?nm.slice(0,43)+'…':nm; lnk.title=nm;
+  tdN.appendChild(lnk); tr.appendChild(tdN);
+
+  // Account
+  var tdA=document.createElement('td'); tdA.style.maxWidth='150px';
+  var accN=(p.pse__Account__r&&p.pse__Account__r.Name)?p.pse__Account__r.Name:'—';
+  var accS=document.createElement('span'); accS.textContent=accN.length>22?accN.slice(0,20)+'…':accN; accS.title=accN;
+  tdA.appendChild(accS); tr.appendChild(tdA);
+
+  // DM
+  var tdDM=document.createElement('td');
+  var chip=document.createElement('div'); chip.className='dm-chip';
+  var dmInf=DM_MAP[p.pse__Project_Manager__c];
+  var dot=document.createElement('span'); dot.className='dm-dot'; dot.style.background=dmInf?dmInf.color:'#8892aa';
+  var dmFull=(p.pse__Project_Manager__r&&p.pse__Project_Manager__r.Name)?p.pse__Project_Manager__r.Name:'—';
+  var dmTxt=document.createElement('span'); dmTxt.textContent=dmFull.split(' ').pop(); dmTxt.title=dmFull;
+  chip.appendChild(dot); chip.appendChild(dmTxt); tdDM.appendChild(chip); tr.appendChild(tdDM);
+
+  // Status
+  var tdS=document.createElement('td'); tdS.appendChild(makePill(p.pse__Project_Status__c)); tr.appendChild(tdS);
+
+  // % Complete
+  var tdP=document.createElement('td'); tdP.style.minWidth='120px';
+  var pct=p.psa_pm_PercentComplete__c;
+  var pw=document.createElement('div'); pw.className='prog-wrap';
+  var po=document.createElement('div'); po.className='prog-bar-outer';
+  var pi=document.createElement('div'); pi.className='prog-bar-inner';
+  var pn=(pct!=null)?Math.min(100,Math.max(0,pct)):0;
+  pi.style.width=pn+'%'; pi.style.background=pn>=75?'#22c55e':pn>=40?'#3b82f6':'#f59e0b';
+  var pl=document.createElement('span'); pl.className='prog-label'; pl.textContent=(pct!=null)?pct+'%':'—';
+  po.appendChild(pi); pw.appendChild(po); pw.appendChild(pl); tdP.appendChild(pw); tr.appendChild(tdP);
+
+  // Timeline
+  var tdT=document.createElement('td'); tdT.style.minWidth='90px';
+  var sd=parseDate(p.pse__Start_Date__c), ed=parseDate(p.pse__End_Date__c);
+  var tlW=document.createElement('div'); tlW.className='timeline-wrap';
+  var tlO=document.createElement('div'); tlO.className='timeline-bar-outer';
+  var tlI=document.createElement('div'); tlI.className='timeline-bar-inner';
+  var tp=0;
+  if(sd&&ed&&ed>sd){ var tot=ed.getTime()-sd.getTime(); tp=Math.max(0,Math.min(100,Math.round((Math.min(TODAY.getTime(),ed.getTime())-sd.getTime())/tot*100))); }
+  var pastE=ed&&ed<TODAY;
+  tlI.style.width=tp+'%'; tlI.style.background=pastE?'#ef4444':tp>80?'#f59e0b':'#5b6cf9';
+  tlO.appendChild(tlI);
+  var tlD=document.createElement('div'); tlD.className='timeline-dates';
+  var tlS2=document.createElement('span'); tlS2.textContent=fmtDate(p.pse__Start_Date__c);
+  var tlE2=document.createElement('span'); tlE2.textContent=fmtDate(p.pse__End_Date__c);
+  if(pastE) tlE2.style.color='#ef4444';
+  tlD.appendChild(tlS2); tlD.appendChild(tlE2);
+  tlW.appendChild(tlO); tlW.appendChild(tlD); tdT.appendChild(tlW); tr.appendChild(tdT);
+
+  // Financial / Schedule / Resources
+  var tdF=document.createElement('td'); tdF.appendChild(makePill(p.pse__Financial_Status__c)); tr.appendChild(tdF);
+  var tdSc=document.createElement('td'); tdSc.appendChild(makePill(p.pse__Schedule_Status__c)); tr.appendChild(tdSc);
+  var tdR=document.createElement('td'); tdR.appendChild(makePill(p.PSA_PM_Resources__c)); tr.appendChild(tdR);
+
+  // Risk
+  var tdRk=document.createElement('td');
+  if(p.psa_pm_At_Risk__c){ var rs=document.createElement('span'); rs.className='at-risk'; rs.textContent='⚠ At Risk'; tdRk.appendChild(rs); }
+  else { var nr=document.createElement('span'); nr.style.color='var(--muted)'; nr.textContent='—'; tdRk.appendChild(nr); }
+  tr.appendChild(tdRk);
+
+  // Hrs Left
+  var tdH=document.createElement('td'); var hl=p.PSA_PM_Total_Billable_Hours_Remaining__c;
+  var hs=document.createElement('span');
+  if(hl!=null){ hs.textContent=fmtNum(hl); if(hl<0)hs.style.color='#ef4444'; else if(hl===0)hs.style.color='var(--muted)'; }
+  else { hs.textContent='—'; hs.style.color='var(--muted)'; }
+  tdH.appendChild(hs); tr.appendChild(tdH);
+
+  // Sub-Type
+  var tdSt=document.createElement('td'); var sts=document.createElement('span');
+  sts.textContent=p.psa_pm_Project_Sub_Type__c||'—';
+  if(!p.psa_pm_Project_Sub_Type__c) sts.style.color='var(--muted)';
+  tdSt.appendChild(sts); tr.appendChild(tdSt);
+
+  // Portfolio Mgr
+  var tdPm=document.createElement('td');
+  var pmN=(p.psa_pm_Portfolio_Manager__r&&p.psa_pm_Portfolio_Manager__r.Name)?p.psa_pm_Portfolio_Manager__r.Name:'—';
+  var pmS=document.createElement('span'); pmS.textContent=pmN;
+  if(pmN==='—') pmS.style.color='var(--muted)';
+  tdPm.appendChild(pmS); tr.appendChild(tdPm);
+
+  return tr;
+}
+
+function buildTableHeader(trEl, sortCol, sortDir, onSort) {
+  clearEl(trEl);
+  COLUMNS.forEach(function(col){
+    var th=document.createElement('th');
+    if(col.sortable){
+      th.setAttribute('data-col',col.key);
+      if(sortCol===col.key) th.className='sort-'+sortDir;
+      th.addEventListener('click',function(){ onSort(col.key); });
     }
-    var lbl = document.createElement('span'); lbl.textContent = col.label;
-    th.appendChild(lbl);
-    if (col.sortable) {
-      var si = document.createElement('i'); si.className = 'sort-icon';
-      si.textContent = (state.sortCol===col.key) ? (state.sortDir==='asc' ? '▲' : '▼') : '⇅';
+    var lbl=document.createElement('span'); lbl.textContent=col.label; th.appendChild(lbl);
+    if(col.sortable){
+      var si=document.createElement('i'); si.className='sort-icon';
+      si.textContent=(sortCol===col.key)?(sortDir==='asc'?'▲':'▼'):'⇅';
       th.appendChild(si);
     }
-    tr.appendChild(th);
+    trEl.appendChild(th);
   });
 }
 
-/* ── RENDER: TABLE BODY ── */
-function renderTableBody() {
-  var tbody  = document.getElementById('table-body');
-  var rcSpan = document.getElementById('row-count');
-  clearEl(tbody);
-
-  if (state.displayed.length === 0) {
-    var etr = document.createElement('tr'); etr.className = 'empty-row';
-    var etd = document.createElement('td'); etd.colSpan = COLUMNS.length; etd.textContent = 'No projects match the current filters.';
-    etr.appendChild(etd); tbody.appendChild(etr);
-    rcSpan.textContent = '0 projects'; return;
+function buildTableBody(tbodyEl, rows, emptyMsg) {
+  clearEl(tbodyEl);
+  if(rows.length===0){
+    var etr=document.createElement('tr'); etr.className='empty-row';
+    var etd=document.createElement('td'); etd.colSpan=COLUMNS.length; etd.textContent=emptyMsg||'No projects found.';
+    etr.appendChild(etd); tbodyEl.appendChild(etr); return;
   }
-  rcSpan.textContent = state.displayed.length + ' project' + (state.displayed.length !== 1 ? 's' : '');
+  rows.forEach(function(p){ tbodyEl.appendChild(buildRow(p)); });
+}
 
-  state.displayed.forEach(function(p) {
-    var tr = document.createElement('tr'); tr.setAttribute('data-id', p.Id);
-    var ac = rowAlertClass(p); if (ac) tr.classList.add(ac);
-    if (state.kpiMatches.indexOf(p.Id) !== -1) tr.classList.add('kpi-highlight');
+/* ══════════════════════════════════════════════════
+   DETAIL VIEW
+══════════════════════════════════════════════════ */
+function showDetailView(kpi) {
+  state.detail.kpi         = kpi;
+  state.detail.projects    = state.allProjects.filter(kpi.match);
+  state.detail.displayed   = state.detail.projects.slice();
+  state.detail.searchQuery = '';
+  state.detail.sortCol     = null;
+  state.detail.sortDir     = 'asc';
 
-    // Project Name
-    var tdN = document.createElement('td'); tdN.style.maxWidth = '260px';
-    var lnk = document.createElement('a');
-    lnk.href = SF_INSTANCE + '/lightning/r/pse__Proj__c/' + p.Id + '/view';
-    lnk.target = '_blank'; lnk.rel = 'noopener noreferrer';
-    var nm = p.Name||'—'; lnk.textContent = nm.length>45 ? nm.slice(0,43)+'…' : nm; lnk.title = nm;
-    tdN.appendChild(lnk); tr.appendChild(tdN);
+  // Populate banner
+  document.getElementById('detail-kpi-icon').textContent  = kpi.icon;
+  document.getElementById('detail-kpi-title').textContent = kpi.label;
+  document.getElementById('detail-kpi-sub').textContent   = kpi.desc || '';
+  document.getElementById('detail-kpi-count').textContent = String(state.detail.projects.length);
+  document.getElementById('detail-search-box').value      = '';
+  document.getElementById('detail-row-count').textContent = state.detail.projects.length + ' project' + (state.detail.projects.length!==1?'s':'');
 
-    // Account
-    var tdA = document.createElement('td'); tdA.style.maxWidth = '150px';
-    var accN = (p.pse__Account__r&&p.pse__Account__r.Name) ? p.pse__Account__r.Name : '—';
-    var accS = document.createElement('span'); accS.textContent = accN.length>22 ? accN.slice(0,20)+'…' : accN; accS.title = accN;
-    tdA.appendChild(accS); tr.appendChild(tdA);
+  renderDetailHeader();
+  buildTableBody(document.getElementById('detail-body'), state.detail.displayed, 'No projects in this category.');
 
-    // DM
-    var tdDM = document.createElement('td');
-    var chip = document.createElement('div'); chip.className = 'dm-chip';
-    var dmInf = DM_MAP[p.pse__Project_Manager__c];
-    var dot2 = document.createElement('span'); dot2.className = 'dm-dot'; dot2.style.background = dmInf ? dmInf.color : '#8892aa';
-    var dmFull = (p.pse__Project_Manager__r&&p.pse__Project_Manager__r.Name) ? p.pse__Project_Manager__r.Name : '—';
-    var dmTxt = document.createElement('span'); dmTxt.textContent = dmFull.split(' ').pop(); dmTxt.title = dmFull;
-    chip.appendChild(dot2); chip.appendChild(dmTxt); tdDM.appendChild(chip); tr.appendChild(tdDM);
+  // Show/hide sections
+  document.getElementById('main-view').style.display    = 'none';
+  document.getElementById('dm-filter-bar').style.display = 'none';
+  document.getElementById('detail-view').style.display  = 'block';
+  window.scrollTo(0, 0);
+}
 
-    // Status
-    var tdS = document.createElement('td'); tdS.appendChild(makePill(p.pse__Project_Status__c)); tr.appendChild(tdS);
-
-    // % Complete
-    var tdP = document.createElement('td'); tdP.style.minWidth = '120px';
-    var pct = p.psa_pm_PercentComplete__c;
-    var pw = document.createElement('div'); pw.className = 'prog-wrap';
-    var po = document.createElement('div'); po.className = 'prog-bar-outer';
-    var pi = document.createElement('div'); pi.className = 'prog-bar-inner';
-    var pn = (pct!=null) ? Math.min(100,Math.max(0,pct)) : 0;
-    pi.style.width = pn + '%'; pi.style.background = pn>=75 ? '#22c55e' : pn>=40 ? '#3b82f6' : '#f59e0b';
-    var pl = document.createElement('span'); pl.className = 'prog-label'; pl.textContent = (pct!=null) ? pct+'%' : '—';
-    po.appendChild(pi); pw.appendChild(po); pw.appendChild(pl); tdP.appendChild(pw); tr.appendChild(tdP);
-
-    // Timeline
-    var tdT = document.createElement('td'); tdT.style.minWidth = '90px';
-    var sd = parseDate(p.pse__Start_Date__c), ed = parseDate(p.pse__End_Date__c);
-    var tlW = document.createElement('div'); tlW.className = 'timeline-wrap';
-    var tlO = document.createElement('div'); tlO.className = 'timeline-bar-outer';
-    var tlI = document.createElement('div'); tlI.className = 'timeline-bar-inner';
-    var tp = 0;
-    if (sd && ed && ed > sd) { var tot = ed.getTime()-sd.getTime(); tp = Math.max(0,Math.min(100,Math.round((Math.min(TODAY.getTime(),ed.getTime())-sd.getTime())/tot*100))); }
-    var pastE = ed && ed < TODAY;
-    tlI.style.width = tp + '%'; tlI.style.background = pastE ? '#ef4444' : tp>80 ? '#f59e0b' : '#5b6cf9';
-    tlO.appendChild(tlI);
-    var tlD = document.createElement('div'); tlD.className = 'timeline-dates';
-    var tlS2 = document.createElement('span'); tlS2.textContent = fmtDate(p.pse__Start_Date__c);
-    var tlE2 = document.createElement('span'); tlE2.textContent = fmtDate(p.pse__End_Date__c);
-    if (pastE) tlE2.style.color = '#ef4444';
-    tlD.appendChild(tlS2); tlD.appendChild(tlE2);
-    tlW.appendChild(tlO); tlW.appendChild(tlD); tdT.appendChild(tlW); tr.appendChild(tdT);
-
-    // Financial / Schedule / Resources
-    var tdF  = document.createElement('td'); tdF.appendChild(makePill(p.pse__Financial_Status__c));  tr.appendChild(tdF);
-    var tdSc = document.createElement('td'); tdSc.appendChild(makePill(p.pse__Schedule_Status__c));  tr.appendChild(tdSc);
-    var tdR  = document.createElement('td'); tdR.appendChild(makePill(p.PSA_PM_Resources__c));        tr.appendChild(tdR);
-
-    // Risk
-    var tdRk = document.createElement('td');
-    if (p.psa_pm_At_Risk__c) {
-      var rs = document.createElement('span'); rs.className = 'at-risk'; rs.textContent = '⚠ At Risk'; tdRk.appendChild(rs);
-    } else {
-      var nr = document.createElement('span'); nr.style.color = 'var(--muted)'; nr.textContent = '—'; tdRk.appendChild(nr);
+function renderDetailHeader() {
+  buildTableHeader(
+    document.getElementById('detail-head'),
+    state.detail.sortCol,
+    state.detail.sortDir,
+    function(col){
+      state.detail.sortDir = (state.detail.sortCol===col && state.detail.sortDir==='asc') ? 'desc' : 'asc';
+      state.detail.sortCol = col;
+      applyDetailSearch();
+      applySort(state.detail.displayed, state.detail.sortCol, state.detail.sortDir);
+      renderDetailHeader();
+      buildTableBody(document.getElementById('detail-body'), state.detail.displayed, 'No projects in this category.');
+      document.getElementById('detail-row-count').textContent = state.detail.displayed.length + ' project' + (state.detail.displayed.length!==1?'s':'');
     }
-    tr.appendChild(tdRk);
+  );
+}
 
-    // Hrs Left
-    var tdH = document.createElement('td');
-    var hl = p.PSA_PM_Total_Billable_Hours_Remaining__c;
-    var hs = document.createElement('span');
-    if (hl != null) { hs.textContent = fmtNum(hl); if (hl<0) hs.style.color='#ef4444'; else if(hl===0) hs.style.color='var(--muted)'; }
-    else { hs.textContent = '—'; hs.style.color = 'var(--muted)'; }
-    tdH.appendChild(hs); tr.appendChild(tdH);
-
-    // Sub-Type
-    var tdSt = document.createElement('td');
-    var sts = document.createElement('span'); sts.textContent = p.psa_pm_Project_Sub_Type__c || '—';
-    if (!p.psa_pm_Project_Sub_Type__c) sts.style.color = 'var(--muted)';
-    tdSt.appendChild(sts); tr.appendChild(tdSt);
-
-    // Portfolio Mgr
-    var tdPm = document.createElement('td');
-    var pmN = (p.psa_pm_Portfolio_Manager__r&&p.psa_pm_Portfolio_Manager__r.Name) ? p.psa_pm_Portfolio_Manager__r.Name : '—';
-    var pmS = document.createElement('span'); pmS.textContent = pmN;
-    if (pmN === '—') pmS.style.color = 'var(--muted)';
-    tdPm.appendChild(pmS); tr.appendChild(tdPm);
-
-    tbody.appendChild(tr);
+function applyDetailSearch() {
+  var q = state.detail.searchQuery.toLowerCase().trim();
+  if (!q) { state.detail.displayed = state.detail.projects.slice(); return; }
+  state.detail.displayed = state.detail.projects.filter(function(p){
+    var acc=(p.pse__Account__r&&p.pse__Account__r.Name)?p.pse__Account__r.Name:'';
+    var dm=(p.pse__Project_Manager__r&&p.pse__Project_Manager__r.Name)?p.pse__Project_Manager__r.Name:'';
+    return (p.Name||'').toLowerCase().indexOf(q)!==-1||acc.toLowerCase().indexOf(q)!==-1||dm.toLowerCase().indexOf(q)!==-1;
   });
 }
 
-/* ── REFRESH ALL ── */
-function refreshAll() {
-  applyDMFilter(); applySearchFilter(); applySort();
-  var bar = document.getElementById('dm-filter-bar');
-  var allBtn = bar.querySelector('[data-dm="all"]');
-  allBtn.className = 'dm-filter-btn' + (state.activeDM==='all' ? ' active' : '');
-  DELIVERY_MANAGERS.forEach(function(dm) {
-    var btn = bar.querySelector('[data-dm="'+dm.id+'"]');
-    if (!btn) return;
-    var isActive = state.activeDM === dm.id;
-    btn.className = 'dm-filter-btn' + (isActive ? ' active' : '');
-    btn.style.borderColor = isActive ? dm.color : '';
-    btn.style.color       = isActive ? dm.color : '';
+function showMainView() {
+  document.getElementById('detail-view').style.display   = 'none';
+  document.getElementById('main-view').style.display     = 'block';
+  document.getElementById('dm-filter-bar').style.display = 'flex';
+  window.scrollTo(0, 0);
+}
+
+/* ══════════════════════════════════════════════════
+   MAIN VIEW RENDERS
+══════════════════════════════════════════════════ */
+function renderDMFilterBar() {
+  var bar=document.getElementById('dm-filter-bar');
+  Array.prototype.slice.call(bar.querySelectorAll('[data-dm]:not([data-dm="all"])')).forEach(function(el){ el.remove(); });
+  var allBtn=bar.querySelector('[data-dm="all"]');
+  allBtn.className='dm-filter-btn'+(state.activeDM==='all'?' active':'');
+  DELIVERY_MANAGERS.forEach(function(dm){
+    var btn=document.createElement('button');
+    var isActive=state.activeDM===dm.id;
+    btn.className='dm-filter-btn'+(isActive?' active':'');
+    btn.setAttribute('data-dm',dm.id);
+    if(isActive){ btn.style.borderColor=dm.color; btn.style.color=dm.color; }
+    var dot=document.createElement('span'); dot.className='dm-dot'; dot.style.background=dm.color;
+    btn.appendChild(dot); btn.appendChild(document.createTextNode(dm.name));
+    btn.addEventListener('click',function(){ state.activeDM=dm.id; refreshMain(); });
+    bar.appendChild(btn);
+  });
+}
+
+function renderKPIs() {
+  var grid=document.getElementById('kpi-grid'); clearEl(grid);
+  KPI_DEFS.forEach(function(kpi){
+    var card=document.createElement('div');
+    card.className='kpi-card border-'+kpi.border+(kpi.placeholder?' placeholder-card':'');
+    var icon=document.createElement('span'); icon.className='kpi-icon'; icon.textContent=kpi.icon;
+    var label=document.createElement('div'); label.className='kpi-label'; label.textContent=kpi.label;
+    var val=document.createElement('div'); val.className='kpi-value';
+    if(kpi.placeholder){
+      val.textContent='—';
+      var note=document.createElement('div'); note.className='kpi-note'; note.textContent='Requires Milestone data';
+      card.appendChild(icon); card.appendChild(label); card.appendChild(val); card.appendChild(note);
+    } else {
+      var count=state.filtered.filter(kpi.match).length;
+      val.textContent=String(count);
+      card.appendChild(icon); card.appendChild(label); card.appendChild(val);
+      card.addEventListener('click', function(){ showDetailView(kpi); });
+    }
+    grid.appendChild(card);
+  });
+}
+
+function renderDoughnutChart(){
+  var counts={Green:0,Yellow:0,Red:0,'Not Set':0};
+  state.filtered.forEach(function(p){ var t=p.psa_Overall_Project_Status_Trend__c||p.pse__Project_Status__c; if(!t)counts['Not Set']++; else if(t==='Green')counts.Green++; else if(t==='Yellow')counts.Yellow++; else if(t==='Red')counts.Red++; else counts['Not Set']++; });
+  var data=[counts.Green,counts.Yellow,counts.Red,counts['Not Set']];
+  if(state.charts.doughnut){ state.charts.doughnut.data.datasets[0].data=data; state.charts.doughnut.update('none'); return; }
+  var ctx=document.getElementById('chart-doughnut').getContext('2d');
+  state.charts.doughnut=new Chart(ctx,{type:'doughnut',data:{labels:['Green','Yellow','Red','Not Set'],datasets:[{data:data,backgroundColor:['#22c55e','#f59e0b','#ef4444','#4b5563'],borderWidth:2,borderColor:'#1a1d27',hoverBorderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{position:'bottom',labels:{color:'#8892aa',font:{size:11},padding:8,boxWidth:10}},tooltip:{callbacks:{label:function(c){return ' '+c.label+': '+c.raw;}}}}}});
+}
+function renderHealthChart(){
+  var fields=['pse__Financial_Status__c','pse__Schedule_Status__c','pse__Scope_Status__c'];
+  var g=[0,0,0],y=[0,0,0],r=[0,0,0],n=[0,0,0];
+  state.filtered.forEach(function(p){ fields.forEach(function(f,i){ var v=p[f]; if(!v)n[i]++; else if(v==='Green')g[i]++; else if(v==='Yellow')y[i]++; else if(v==='Red')r[i]++; else n[i]++; }); });
+  var ds=[{label:'Green',data:g,backgroundColor:'rgba(34,197,94,0.75)'},{label:'Yellow',data:y,backgroundColor:'rgba(245,158,11,0.75)'},{label:'Red',data:r,backgroundColor:'rgba(239,68,68,0.75)'},{label:'N/A',data:n,backgroundColor:'rgba(75,85,99,0.6)'}];
+  if(state.charts.health){ ds.forEach(function(d,i){ state.charts.health.data.datasets[i].data=d.data; }); state.charts.health.update('none'); return; }
+  var ctx=document.getElementById('chart-health').getContext('2d');
+  state.charts.health=new Chart(ctx,{type:'bar',data:{labels:['Financial','Schedule','Scope'],datasets:ds},options:{responsive:true,maintainAspectRatio:false,scales:{x:{stacked:true,ticks:{color:'#8892aa',font:{size:11}},grid:{color:'rgba(46,49,80,0.4)'}},y:{stacked:true,ticks:{color:'#8892aa',font:{size:11},stepSize:1},grid:{color:'rgba(46,49,80,0.4)'}}},plugins:{legend:{position:'bottom',labels:{color:'#8892aa',font:{size:11},padding:8,boxWidth:10}}}}});
+}
+function renderCompleteChart(){
+  var projects=state.filtered.filter(function(p){ return p.psa_pm_PercentComplete__c!=null; }).slice().sort(function(a,b){ return b.psa_pm_PercentComplete__c-a.psa_pm_PercentComplete__c; }).slice(0,15);
+  var labels=projects.map(function(p){ var n=p.Name||''; return n.length>30?n.slice(0,28)+'…':n; });
+  var data=projects.map(function(p){ return p.psa_pm_PercentComplete__c; });
+  var colors=data.map(function(v){ return v>=75?'rgba(34,197,94,0.75)':v>=40?'rgba(59,130,246,0.75)':'rgba(245,158,11,0.75)'; });
+  if(state.charts.complete){ state.charts.complete.data.labels=labels; state.charts.complete.data.datasets[0].data=data; state.charts.complete.data.datasets[0].backgroundColor=colors; state.charts.complete.update('none'); return; }
+  var ctx=document.getElementById('chart-complete').getContext('2d');
+  state.charts.complete=new Chart(ctx,{type:'bar',data:{labels:labels,datasets:[{label:'% Complete',data:data,backgroundColor:colors,borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',scales:{x:{min:0,max:100,ticks:{color:'#8892aa',font:{size:10},callback:function(v){return v+'%';}},grid:{color:'rgba(46,49,80,0.4)'}},y:{ticks:{color:'#8892aa',font:{size:10}},grid:{display:false}}},plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return ' '+c.raw+'%';}}}}}});
+}
+
+function renderMainTableHeader(){
+  buildTableHeader(
+    document.getElementById('table-head'), state.sortCol, state.sortDir,
+    function(col){
+      state.sortDir=(state.sortCol===col&&state.sortDir==='asc')?'desc':'asc';
+      state.sortCol=col;
+      applySearchFilter(); applySort(state.displayed, state.sortCol, state.sortDir);
+      renderMainTableHeader();
+      buildTableBody(document.getElementById('table-body'), state.displayed, 'No projects match the current filters.');
+      document.getElementById('row-count').textContent=state.displayed.length+' project'+(state.displayed.length!==1?'s':'');
+    }
+  );
+}
+
+function renderMainTableBody(){
+  buildTableBody(document.getElementById('table-body'), state.displayed, 'No projects match the current filters.');
+  document.getElementById('row-count').textContent=state.displayed.length+' project'+(state.displayed.length!==1?'s':'');
+}
+
+/* ── REFRESH MAIN ── */
+function refreshMain(){
+  applyDMFilter(); applySearchFilter(); applySort(state.displayed, state.sortCol, state.sortDir);
+  var bar=document.getElementById('dm-filter-bar');
+  var allBtn=bar.querySelector('[data-dm="all"]');
+  allBtn.className='dm-filter-btn'+(state.activeDM==='all'?' active':'');
+  DELIVERY_MANAGERS.forEach(function(dm){
+    var btn=bar.querySelector('[data-dm="'+dm.id+'"]'); if(!btn) return;
+    var isActive=state.activeDM===dm.id;
+    btn.className='dm-filter-btn'+(isActive?' active':'');
+    btn.style.borderColor=isActive?dm.color:''; btn.style.color=isActive?dm.color:'';
   });
   renderKPIs(); renderDoughnutChart(); renderHealthChart(); renderCompleteChart();
-  renderTableHeader(); renderTableBody();
+  renderMainTableHeader(); renderMainTableBody();
 }
 
 /* ── LOAD DATA ── */
-function loadData(source, records) {
-  state.allProjects = records; state.dataSource = source; state.activeKPI = null; state.kpiMatches = [];
-  var badge = document.getElementById('data-source-badge');
-  badge.className = source==='live' ? 'badge-live' : 'badge-bundled';
-  badge.textContent = source==='live' ? 'LIVE' : 'BUNDLED';
-  document.getElementById('last-refresh').textContent = 'Updated ' + new Date().toLocaleTimeString();
-  refreshAll();
+function loadData(source, records){
+  state.allProjects=records; state.dataSource=source;
+  var badge=document.getElementById('data-source-badge');
+  badge.className=source==='live'?'badge-live':'badge-bundled';
+  badge.textContent=source==='live'?'LIVE':'BUNDLED';
+  document.getElementById('last-refresh').textContent='Updated '+new Date().toLocaleTimeString();
+  refreshMain();
 }
 
 /* ── INIT ── */
-function init() {
-  renderHeaderDMs(); renderDMFilterBar(); renderTableHeader();
-  document.querySelector('[data-dm="all"]').addEventListener('click', function() {
-    state.activeDM = 'all'; state.activeKPI = null; state.kpiMatches = []; refreshAll();
+function init(){
+  renderDMFilterBar(); renderMainTableHeader();
+
+  document.querySelector('[data-dm="all"]').addEventListener('click',function(){ state.activeDM='all'; refreshMain(); });
+
+  document.getElementById('search-box').addEventListener('input',function(e){
+    state.searchQuery=e.target.value; applySearchFilter(); applySort(state.displayed,state.sortCol,state.sortDir); renderMainTableBody();
   });
-  document.getElementById('search-box').addEventListener('input', function(e) {
-    state.searchQuery = e.target.value; applySearchFilter(); applySort(); renderTableBody();
+
+  document.getElementById('refresh-btn').addEventListener('click',function(){
+    fetchLiveData().then(function(r){ loadData(r.source,r.records); });
   });
-  document.getElementById('refresh-btn').addEventListener('click', function() {
-    fetchLiveData().then(function(r) { loadData(r.source, r.records); });
+
+  document.getElementById('back-btn').addEventListener('click', showMainView);
+
+  document.getElementById('detail-search-box').addEventListener('input',function(e){
+    state.detail.searchQuery=e.target.value;
+    applyDetailSearch();
+    applySort(state.detail.displayed, state.detail.sortCol, state.detail.sortDir);
+    buildTableBody(document.getElementById('detail-body'), state.detail.displayed, 'No projects in this category.');
+    document.getElementById('detail-row-count').textContent=state.detail.displayed.length+' project'+(state.detail.displayed.length!==1?'s':'');
   });
-  fetchLiveData().then(function(r) { loadData(r.source, r.records); });
+
+  fetchLiveData().then(function(r){ loadData(r.source,r.records); });
 }
 
-document.readyState === 'loading'
-  ? document.addEventListener('DOMContentLoaded', init)
+document.readyState==='loading'
+  ? document.addEventListener('DOMContentLoaded',init)
   : init();
 </script>
 </body>
