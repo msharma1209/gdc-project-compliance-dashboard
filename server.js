@@ -72,7 +72,7 @@ var SOQL = [
   'pse__Billing_Type__c, PSA_PM_Margin_Percent__c,',
   '(SELECT Id, PSA_PM_Adoption_Event_Status__c, PSA_PM_Adoption_Event_Date__c FROM Adoption_Events__r),',
   '(SELECT Id, Name, pse__Target_Date__c, pse__Include_In_Financials__c FROM pse__Milestones__r WHERE pse__Include_In_Financials__c = true),',
-  '(SELECT Id, psa_pm_Survey_Response_Date__c FROM Customer_Surveys__r ORDER BY psa_pm_Survey_Response_Date__c DESC LIMIT 1),',
+  '(SELECT Id, psa_pm_Survey_Response_Date__c FROM Customer_Surveys__r WHERE psa_pm_Survey_Response_Date__c != null ORDER BY psa_pm_Survey_Response_Date__c DESC LIMIT 1),',
   // Status reports sub-query — used to derive MAX(PSA_PM_Status_Report_Week__c) reliably
   '(SELECT Id, PSA_PM_Status_Report_Week__c FROM Status_Reports__r ORDER BY PSA_PM_Status_Report_Week__c DESC LIMIT 1)',
   'FROM pse__Proj__c',
