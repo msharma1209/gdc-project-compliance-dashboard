@@ -997,10 +997,10 @@ function normaliseProjects(records) {
       ? srRecs[0].PSA_PM_Status_Report_Week__c   // already ordered DESC LIMIT 1
       : null;
 
-    // MAX(psa_pm_Survey_Response_Date__c) from Customer_Surveys__r sub-query
+    // MAX(psa_pm_Survey_Sent_Date__c) from Customer_Surveys__r sub-query
     var csRecs = p.Customer_Surveys__r && p.Customer_Surveys__r.records;
     p._lastCSAT = (csRecs && csRecs.length > 0)
-      ? csRecs[0].psa_pm_Survey_Response_Date__c  // already ordered DESC LIMIT 1
+      ? csRecs[0].psa_pm_Survey_Sent_Date__c  // already ordered DESC LIMIT 1 by sent date
       : null;
   });
   return records;
