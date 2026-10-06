@@ -1,9 +1,16 @@
 /**
  * Informatica Practice – GDC Project Compliance Dashboard
- * Secure Node.js proxy server — SF token stays on the server, never sent to browser.
+ * Secure Node.js proxy server.
  *
- * Local:      node server.js        (reads .env automatically)
- * Production: set SF_TOKEN env var in Render dashboard, then deploy.
+ * Authentication strategy (in priority order):
+ *   1. SF_USERNAME + SF_PASSWORD env vars → auto-login via SOAP, token never expires
+ *   2. SF_TOKEN env var (legacy) → static token, will expire eventually
+ *
+ * SF_PASSWORD should be: your Salesforce password + your Security Token
+ * (e.g. "MyPassword123ABcDeFgH" where ABcDeFgH is the SF security token)
+ *
+ * Local dev:   add SF_USERNAME / SF_PASSWORD to .env
+ * Render:      add SF_USERNAME / SF_PASSWORD in Environment tab — never touch again
  */
 
 const http        = require('http');
@@ -30,21 +37,125 @@ const { execFile } = require('child_process');
 
 var PORT        = Number(process.env.PORT) || 3500;
 var SF_INSTANCE = process.env.SF_INSTANCE || 'https://infa.my.salesforce.com';
-var SF_TOKEN    = process.env.SF_TOKEN    || '';
+var SF_USERNAME = process.env.SF_USERNAME || '';
+var SF_PASSWORD = process.env.SF_PASSWORD || '';   // password + security token concatenated
+var SF_TOKEN    = process.env.SF_TOKEN    || '';   // fallback static token (legacy)
 var PUBLIC_DIR  = path.join(__dirname, 'public');
 
-// ── Mime types ────────────────────────────────────────────────────────────────
-var MIME = {
-  '.html': 'text/html; charset=utf-8',
-  '.css':  'text/css',
-  '.js':   'application/javascript',
-  '.json': 'application/json',
-  '.ico':  'image/x-icon',
-  '.png':  'image/png',
-  '.svg':  'image/svg+xml',
+// ── In-memory token cache (refreshed automatically) ──────────────────────────
+var tokenCache = {
+  accessToken:  SF_TOKEN,   // seed with static token if provided
+  instanceUrl:  SF_INSTANCE,
+  refreshing:   false,
+  waitQueue:    [],          // callbacks waiting for a fresh token
 };
 
-// ── SOQL query (DM IDs are not secrets) ──────────────────────────────────────
+// ── Salesforce SOAP login ─────────────────────────────────────────────────────
+function soapLogin(callback) {
+  if (!SF_USERNAME || !SF_PASSWORD) {
+    return callback(new Error('SF_USERNAME / SF_PASSWORD not set — cannot auto-login.'));
+  }
+
+  var body = [
+    '<?xml version="1.0" encoding="utf-8"?>',
+    '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"',
+    '  xmlns:urn="urn:partner.soap.sforce.com">',
+    '  <soapenv:Body>',
+    '    <urn:login>',
+    '      <urn:username>' + SF_USERNAME + '</urn:username>',
+    '      <urn:password>' + SF_PASSWORD + '</urn:password>',
+    '    </urn:login>',
+    '  </soapenv:Body>',
+    '</soapenv:Envelope>',
+  ].join('\n');
+
+  var loginHost = 'login.salesforce.com';
+  var loginPath = '/services/Soap/u/59.0';
+  var options = {
+    hostname: loginHost,
+    path:     loginPath,
+    method:   'POST',
+    headers:  {
+      'Content-Type':   'text/xml; charset=UTF-8',
+      'SOAPAction':     '"login"',
+      'Content-Length': Buffer.byteLength(body),
+    },
+  };
+
+  var req = https.request(options, function (res) {
+    var chunks = [];
+    res.on('data', function (c) { chunks.push(c); });
+    res.on('end', function () {
+      var xml = Buffer.concat(chunks).toString('utf8');
+
+      // Check for fault
+      if (xml.indexOf('<faultstring>') !== -1) {
+        var faultMatch = xml.match(/<faultstring>([\s\S]*?)<\/faultstring>/);
+        return callback(new Error('SF login failed: ' + (faultMatch ? faultMatch[1] : 'unknown')));
+      }
+
+      // Extract sessionId and serverUrl
+      var sessionMatch = xml.match(/<sessionId>([\s\S]*?)<\/sessionId>/);
+      var serverMatch  = xml.match(/<serverUrl>([\s\S]*?)<\/serverUrl>/);
+      if (!sessionMatch || !serverMatch) {
+        return callback(new Error('SF login: could not parse sessionId/serverUrl from response.'));
+      }
+
+      var sessionId   = sessionMatch[1].trim();
+      var serverUrl   = serverMatch[1].trim();
+      // Derive instance URL from serverUrl (e.g. https://infa.my.salesforce.com/services/...)
+      var instanceUrl = serverUrl.replace(/\/services\/.*$/, '');
+
+      callback(null, sessionId, instanceUrl);
+    });
+  });
+
+  req.on('error', function (err) { callback(err); });
+  req.write(body);
+  req.end();
+}
+
+// ── Get a valid token — auto-refresh if needed ────────────────────────────────
+function getToken(callback) {
+  // If we have a cached token, use it immediately
+  if (tokenCache.accessToken) {
+    return callback(null, tokenCache.accessToken, tokenCache.instanceUrl);
+  }
+  // Queue callbacks if a refresh is already in progress
+  if (tokenCache.refreshing) {
+    tokenCache.waitQueue.push(callback);
+    return;
+  }
+  refreshToken(callback);
+}
+
+function refreshToken(callback) {
+  tokenCache.refreshing = true;
+  console.log('  🔄  Refreshing Salesforce token via SOAP login…');
+
+  soapLogin(function (err, sessionId, instanceUrl) {
+    tokenCache.refreshing = false;
+    if (err) {
+      console.error('  ❌  SF login error:', err.message);
+      // Drain the queue with the error
+      var q = tokenCache.waitQueue.splice(0);
+      q.forEach(function (cb) { cb(err); });
+      if (callback) callback(err);
+      return;
+    }
+
+    tokenCache.accessToken = sessionId;
+    tokenCache.instanceUrl = instanceUrl;
+    console.log('  ✅  Salesforce token refreshed. Instance:', instanceUrl);
+
+    // Drain the queue
+    var q = tokenCache.waitQueue.splice(0);
+    q.forEach(function (cb) { cb(null, sessionId, instanceUrl); });
+    if (callback) callback(null, sessionId, instanceUrl);
+  });
+}
+
+// ── SOQL query ────────────────────────────────────────────────────────────────
 var DM_IDS = [
   '003VM00000JsZylYAF', // Megha Sharma
   '0033f00000Cd4ZVAAZ', // Hanumanth Kulkarni
@@ -79,22 +190,16 @@ var SOQL = [
   'ORDER BY pse__Project_Manager__r.Name, LastModifiedDate DESC LIMIT 200',
 ].join(' ');
 
-// ── /api/projects — server-side proxy to Salesforce ──────────────────────────
-function handleApiProjects(res) {
-  if (!SF_TOKEN) {
-    res.writeHead(503, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'SF_TOKEN environment variable is not set on the server.' }));
-    return;
-  }
-
-  var sfUrl   = SF_INSTANCE + '/services/data/v59.0/query?q=' + encodeURIComponent(SOQL);
-  var parsed  = url.parse(sfUrl);
+// ── Run SOQL query with a given token ─────────────────────────────────────────
+function runQuery(accessToken, instanceUrl, res) {
+  var sfUrl  = instanceUrl + '/services/data/v59.0/query?q=' + encodeURIComponent(SOQL);
+  var parsed = url.parse(sfUrl);
   var options = {
     hostname: parsed.hostname,
     path:     parsed.path,
     method:   'GET',
     headers:  {
-      'Authorization': 'Bearer ' + SF_TOKEN,
+      'Authorization': 'Bearer ' + accessToken,
       'Content-Type':  'application/json',
     },
   };
@@ -104,6 +209,22 @@ function handleApiProjects(res) {
     sfRes.on('data', function (c) { chunks.push(c); });
     sfRes.on('end', function () {
       var body = Buffer.concat(chunks).toString('utf8');
+
+      // Detect expired/invalid session — auto-refresh and retry once
+      if (sfRes.statusCode === 401 || body.indexOf('INVALID_SESSION_ID') !== -1) {
+        console.log('  ⚠️  Token expired mid-request — clearing cache and retrying…');
+        tokenCache.accessToken = '';  // force re-login on next getToken call
+        refreshToken(function (err, newToken, newInstance) {
+          if (err) {
+            res.writeHead(503, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Could not refresh Salesforce token: ' + err.message }));
+            return;
+          }
+          runQuery(newToken, newInstance, res);  // single retry
+        });
+        return;
+      }
+
       res.writeHead(sfRes.statusCode, {
         'Content-Type':                'application/json',
         'Access-Control-Allow-Origin': '*',
@@ -118,6 +239,18 @@ function handleApiProjects(res) {
   });
 
   sfReq.end();
+}
+
+// ── /api/projects ─────────────────────────────────────────────────────────────
+function handleApiProjects(res) {
+  getToken(function (err, accessToken, instanceUrl) {
+    if (err) {
+      res.writeHead(503, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: err.message }));
+      return;
+    }
+    runQuery(accessToken, instanceUrl, res);
+  });
 }
 
 // ── Static file serving from public/ ─────────────────────────────────────────
@@ -142,6 +275,17 @@ function handleStatic(reqPath, res) {
   });
 }
 
+// ── Mime types ────────────────────────────────────────────────────────────────
+var MIME = {
+  '.html': 'text/html; charset=utf-8',
+  '.css':  'text/css',
+  '.js':   'application/javascript',
+  '.json': 'application/json',
+  '.ico':  'image/x-icon',
+  '.png':  'image/png',
+  '.svg':  'image/svg+xml',
+};
+
 // ── HTTP server ───────────────────────────────────────────────────────────────
 var server = http.createServer(function (req, res) {
   if (req.method !== 'GET') {
@@ -164,11 +308,21 @@ server.listen(PORT, function () {
   console.log('');
   console.log('       http://localhost:' + PORT);
   console.log('');
-  if (!SF_TOKEN) {
-    console.log('  ⚠️   WARNING: SF_TOKEN is not set — live data will not load.');
-    console.log('       Create a .env file with: SF_TOKEN=<your_salesforce_token>');
-    console.log('');
+
+  if (SF_USERNAME && SF_PASSWORD) {
+    console.log('  🔐  Auth mode: auto-login (SF_USERNAME + SF_PASSWORD) — token refreshes automatically.');
+    // Eagerly fetch a fresh token on startup
+    refreshToken(function (err) {
+      if (err) console.error('  ❌  Initial SF login failed:', err.message);
+    });
+  } else if (SF_TOKEN) {
+    console.log('  🔑  Auth mode: static SF_TOKEN (will expire — consider switching to SF_USERNAME + SF_PASSWORD).');
+  } else {
+    console.log('  ⚠️   WARNING: No SF credentials set — live data will not load.');
+    console.log('       Add SF_USERNAME and SF_PASSWORD to .env or Render environment.');
   }
+
+  console.log('');
   console.log('  Press Ctrl+C to stop.');
   console.log('');
 
