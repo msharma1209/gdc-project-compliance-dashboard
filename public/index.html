@@ -266,6 +266,13 @@ function clearEl(el) { while (el.firstChild) el.removeChild(el.firstChild); }
 var TODAY        = new Date();
 var SF_INSTANCE  = 'https://infa.my.salesforce.com';
 
+var PRAC_COLORS = {
+  'Consulting Services':'#3b82f6','Managed Services':'#22c55e',
+  'Fixed Price':'#8b5cf6','Time and Materials':'#f59e0b',
+  'Service units':'#06b6d4','Non-Billable':'#6b7280',
+  'Unassigned':'#ef4444'
+};
+
 var DELIVERY_MANAGERS = [
   { id: '003VM00000V6fl2YAB', name: 'Aparna Kochukuttan', color: '#06b6d4' },
   { id: '0033f00000Cd4ZVAAZ', name: 'Hanumanth Kulkarni', color: '#8b5cf6' },
@@ -884,12 +891,6 @@ function renderKPIs() {
       var total = activeProjects.length;
       card.appendChild(icon); card.appendChild(label);
       var bdWrap = document.createElement('div'); bdWrap.className='kpi-breakdown';
-      var PRAC_COLORS = {
-        'Consulting Services':'#3b82f6','Managed Services':'#22c55e',
-        'Fixed Price':'#8b5cf6','Time and Materials':'#f59e0b',
-        'Service units':'#06b6d4','Non-Billable':'#6b7280',
-        'Unassigned':'#ef4444'
-      };
       rows.forEach(function(row){
         var bdRow = document.createElement('div'); bdRow.className='kpi-breakdown-row';
         var color = PRAC_COLORS[row.label] || '#8892aa';
