@@ -102,21 +102,22 @@
   .kpi-breakdown-count { font-size: 0.85rem; font-weight: 700; color: var(--heading); min-width: 20px; text-align: right; }
   .kpi-breakdown-bar { height: 4px; border-radius: 2px; margin-top: 1px; transition: width 0.3s; }
 
-  /* ── Charts Container (outer panel) ── */
+  /* ── Charts Container (outer panel) — dark navy like reference site ── */
   #charts-container {
-    background: rgba(255,255,255,0.6); backdrop-filter: blur(12px);
-    border-radius: 24px; padding: 20px;
-    box-shadow: 0 6px 32px rgba(30,80,160,0.1), 0 1px 4px rgba(30,80,160,0.06);
-    border: 1px solid rgba(200,220,255,0.5);
+    background: linear-gradient(135deg, #0d2157 0%, #1a3a7c 60%, #1e4699 100%);
+    border-radius: 24px; padding: 22px;
+    box-shadow: 0 8px 40px rgba(13,33,87,0.35), 0 2px 8px rgba(13,33,87,0.2);
+    border: none;
   }
+  #charts-section .section-header { color: #94a3b8; }
   /* ── Charts Row (inner cards) ── */
   #charts-row { display: grid; grid-template-columns: 1fr 2fr 2fr; gap: 14px; }
   .chart-card {
-    background: rgba(255,255,255,0.9); border: none; border-radius: 16px;
-    box-shadow: 0 2px 12px rgba(30,80,160,0.07);
+    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.14); border-radius: 16px;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.15);
     padding: 18px 16px;
   }
-  .chart-title { font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; display: flex; align-items: center; gap: 6px; }
+  .chart-title { font-size: 0.72rem; font-weight: 700; color: rgba(200,220,255,0.85); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; display: flex; align-items: center; gap: 6px; }
   .chart-title-icon { font-size: 0.95rem; line-height: 1; }
   .chart-wrap { position: relative; width: 100%; }
   .chart-wrap canvas { cursor: pointer; }
@@ -994,7 +995,7 @@ function renderDoughnutChart(){
   var data=[counts.Green,counts.Yellow,counts.Red,counts['Not Set']];
   if(state.charts.doughnut){ state.charts.doughnut.data.datasets[0].data=data; state.charts.doughnut.update('none'); return; }
   var ctx=document.getElementById('chart-doughnut').getContext('2d');
-  state.charts.doughnut=new Chart(ctx,{type:'doughnut',data:{labels:['Green','Yellow','Red','Not Set'],datasets:[{data:data,backgroundColor:['rgba(34,197,94,0.7)','rgba(251,191,36,0.7)','rgba(248,113,113,0.7)','rgba(148,163,184,0.5)'],borderWidth:0,hoverOffset:6}]},options:{responsive:true,maintainAspectRatio:false,cutout:'68%',cursor:'pointer',plugins:{legend:{position:'bottom',labels:{color:'#64748b',font:{size:11},padding:10,boxWidth:10,borderRadius:4,usePointStyle:true,pointStyle:'circle'}},tooltip:{callbacks:{label:function(c){return '  '+c.label+': '+c.raw;}}}},onClick:function(evt,elements){
+  state.charts.doughnut=new Chart(ctx,{type:'doughnut',data:{labels:['Green','Yellow','Red','Not Set'],datasets:[{data:data,backgroundColor:['rgba(34,197,94,0.7)','rgba(251,191,36,0.7)','rgba(248,113,113,0.7)','rgba(148,163,184,0.5)'],borderWidth:0,hoverOffset:6}]},options:{responsive:true,maintainAspectRatio:false,cutout:'68%',cursor:'pointer',plugins:{legend:{position:'bottom',labels:{color:'rgba(200,220,255,0.85)',font:{size:11},padding:10,boxWidth:10,borderRadius:4,usePointStyle:true,pointStyle:'circle'}},tooltip:{callbacks:{label:function(c){return '  '+c.label+': '+c.raw;}}}},onClick:function(evt,elements){
     if(!elements||!elements.length) return;
     var label=state.charts.doughnut.data.labels[elements[0].index];
     showDetailView({
@@ -1026,7 +1027,7 @@ function renderPracticeChart(){
     state.charts.practice.update('none'); return;
   }
   var ctx=document.getElementById('chart-practice').getContext('2d');
-  state.charts.practice=new Chart(ctx,{type:'bar',data:{labels:labels,datasets:[{data:data,backgroundColor:colors,borderRadius:6,borderSkipped:false}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,scales:{x:{display:false,grid:{display:false},border:{display:false},ticks:{display:false}},y:{ticks:{color:'#475569',font:{size:11},padding:4},grid:{display:false},border:{display:false}}},plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return '  '+c.raw+' projects';}}},datalabels:{display:false}},onClick:function(evt,elements){
+  state.charts.practice=new Chart(ctx,{type:'bar',data:{labels:labels,datasets:[{data:data,backgroundColor:colors,borderRadius:6,borderSkipped:false}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,scales:{x:{display:false,grid:{display:false},border:{display:false},ticks:{display:false}},y:{ticks:{color:'rgba(200,220,255,0.8)',font:{size:11},padding:4},grid:{display:false},border:{display:false}}},plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return '  '+c.raw+' projects';}}},datalabels:{display:false}},onClick:function(evt,elements){
     if(!elements||!elements.length) return;
     var lbl=state.charts.practice.data.labels[elements[0].index];
     showDetailView({
@@ -1056,7 +1057,7 @@ function renderBillingChart(){
     state.charts.billing.update('none'); return;
   }
   var ctx=document.getElementById('chart-billing').getContext('2d');
-  state.charts.billing=new Chart(ctx,{type:'bar',data:{labels:labels,datasets:[{data:data,backgroundColor:colors,borderRadius:6,borderSkipped:false}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,scales:{x:{display:false,grid:{display:false},border:{display:false},ticks:{display:false}},y:{ticks:{color:'#475569',font:{size:11},padding:4},grid:{display:false},border:{display:false}}},plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return '  '+c.raw+' projects';}}}},onClick:function(evt,elements){
+  state.charts.billing=new Chart(ctx,{type:'bar',data:{labels:labels,datasets:[{data:data,backgroundColor:colors,borderRadius:6,borderSkipped:false}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,scales:{x:{display:false,grid:{display:false},border:{display:false},ticks:{display:false}},y:{ticks:{color:'rgba(200,220,255,0.8)',font:{size:11},padding:4},grid:{display:false},border:{display:false}}},plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return '  '+c.raw+' projects';}}}},onClick:function(evt,elements){
     if(!elements||!elements.length) return;
     var lbl=state.charts.billing.data.labels[elements[0].index];
     showDetailView({
