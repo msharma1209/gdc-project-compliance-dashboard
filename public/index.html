@@ -466,8 +466,8 @@ var KPI_DEFS = [
     desc:'Projects with no AE record at all AND no exemption reason set',
     match: function(p) { return !isInternal(p) && hasMissingAdoptionEvent(p); } },
   { id:'missing_csat',     label:'Missing CSAT',             icon:'⭐',  border:'yellow',
-    desc:'No customer satisfaction survey response recorded for the current calendar year',
-    match: function(p) { return !isInternal(p) && !hasCSATThisYear(p); }
+    desc:'No customer satisfaction survey ever recorded (pse_pm_Last_Customer_Survey_Created__c is null)',
+    match: function(p) { return !isInternal(p) && !p.pse_pm_Last_Customer_Survey_Created__c; }
   },
   { id:'milestones',       label:'Milestones Due (30d)',     icon:'🏁', border:'red',
     desc:'Billable milestones with target date in the next 30 days',
