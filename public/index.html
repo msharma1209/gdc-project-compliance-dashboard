@@ -626,7 +626,9 @@ function hasRecentTimecard(p) {
 }
 
 function applyDMFilter() {
-  var base = state.allProjects.filter(function(p){ return !isInternal(p); });
+  var base = state.allProjects.filter(function(p){
+    return !isInternal(p) && hasRecentTimecard(p);
+  });
   state.filtered = state.activeDM==='all' ? base
     : base.filter(function(p){ return p._dmId === state.activeDM; });
 }
@@ -898,7 +900,6 @@ function buildTableBody(tbodyEl, rows, columns, rowBuilder, emptyMsg) {
 function showDetailView(kpi) {
   state.detail.kpi         = kpi;
   state.detail.projects    = state.filtered.filter(function(p){ return kpi.match(p); });
-  // also keep timecard column informational but don't filter on it
   state.detail.displayed   = state.detail.projects.slice();
   state.detail.searchQuery = '';
   state.detail.sortCol     = null;
