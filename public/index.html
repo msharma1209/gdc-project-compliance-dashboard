@@ -94,8 +94,8 @@
   .chart-title { font-size: 0.75rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 14px; }
   .chart-wrap { position: relative; width: 100%; }
   #chart-doughnut-wrap { height: 200px; display: flex; align-items: center; justify-content: center; }
-  #chart-health-wrap   { height: 220px; }
-  #chart-complete-wrap { height: 220px; }
+  #chart-practice-wrap { height: 220px; }
+  #chart-billing-wrap  { height: 220px; }
 
   /* ── Table shared styles ── */
   #table-controls, #detail-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
@@ -233,12 +233,12 @@
           <div class="chart-wrap" id="chart-doughnut-wrap"><canvas id="chart-doughnut"></canvas></div>
         </div>
         <div class="chart-card">
-          <div class="chart-title">Health Indicators</div>
-          <div class="chart-wrap" id="chart-health-wrap"><canvas id="chart-health"></canvas></div>
+          <div class="chart-title">By Practice Type</div>
+          <div class="chart-wrap" id="chart-practice-wrap"><canvas id="chart-practice"></canvas></div>
         </div>
         <div class="chart-card">
-          <div class="chart-title">% Complete Distribution</div>
-          <div class="chart-wrap" id="chart-complete-wrap"><canvas id="chart-complete"></canvas></div>
+          <div class="chart-title">By Billing Type</div>
+          <div class="chart-wrap" id="chart-billing-wrap"><canvas id="chart-billing"></canvas></div>
         </div>
       </div>
     </section>
@@ -302,7 +302,7 @@ var state = {
   allProjects: [], filtered: [], displayed: [],
   activeDM: 'all', searchQuery: '', sortCol: null, sortDir: 'asc',
   dataSource: 'bundled',
-  charts: { doughnut: null, health: null, complete: null },
+  charts: { doughnut: null, practice: null, billing: null },
   detail: { projects: [], displayed: [], searchQuery: '', sortCol: null, sortDir: 'asc', kpi: null }
 };
 
@@ -435,33 +435,6 @@ var KPI_DEFS = [
   { id:'planned_lt_billed',label:'Planned < Billed Hours',   icon:'⚠️', border:'yellow',
     desc:'Planned hours are less than billed hours (negative remaining)',
     match: function(p) { return !isInternal(p) && p.PSA_PM_Total_Billable_Hours_Remaining__c!==null && p.PSA_PM_Total_Billable_Hours_Remaining__c<0; } },
-  { id:'no_category',      label:'By Practice Type',          icon:'🗂️', border:'blue',
-    desc:'Projects by Practice',
-    breakdown: true,
-    getBreakdown: function(projects) {
-      var counts = {};
-      projects.forEach(function(p) {
-        var prac = (p.pse__Practice__r && p.pse__Practice__r.Name) ? p.pse__Practice__r.Name : 'Unassigned';
-        counts[prac] = (counts[prac] || 0) + 1;
-      });
-      // sort by count desc
-      return Object.keys(counts).sort(function(a,b){ return counts[b]-counts[a]; }).map(function(k){ return {label:k, count:counts[k]}; });
-    },
-    match: function(p) { return !isInternal(p); }
-  },
-  { id:'by_billing',       label:'By Billing Type',          icon:'💳', border:'blue',
-    desc:'Projects by Billing Type',
-    breakdown: true,
-    getBreakdown: function(projects) {
-      var counts = {};
-      projects.forEach(function(p) {
-        var bt = p.pse__Billing_Type__c || 'Unassigned';
-        counts[bt] = (counts[bt] || 0) + 1;
-      });
-      return Object.keys(counts).sort(function(a,b){ return counts[b]-counts[a]; }).map(function(k){ return {label:k, count:counts[k]}; });
-    },
-    match: function(p) { return !isInternal(p); }
-  },
   { id:'adoption_upcoming',label:'Upcoming Adoption Events', icon:'🎯', border:'blue',
     desc:'Projects with at least one Adoption Event in Forecast/Forecasted status',
     match: function(p) { return !isInternal(p) && hasUpcomingForecastAdoption(p); } },
@@ -935,15 +908,12 @@ function renderKPIs() {
         (function(rowLabel, kpiDef){
           bdRow.addEventListener('click', function(e){
             e.stopPropagation();
-            var isBilling = kpiDef.id === 'by_billing';
             var kpiCopy = {
               id: kpiDef.id+'_'+rowLabel.toLowerCase().replace(/\s+/g,'_'),
               label: rowLabel,
               icon: kpiDef.icon,
-              desc: (isBilling ? 'Projects with Billing Type: ' : 'Projects with Practice: ') + rowLabel,
-              match: isBilling
-                ? function(p){ return !isInternal(p) && (p.pse__Billing_Type__c||'Unassigned')===rowLabel; }
-                : function(p){ return !isInternal(p) && ((p.pse__Practice__r&&p.pse__Practice__r.Name)||'Unassigned')===rowLabel; }
+              desc: 'Projects with Practice: ' + rowLabel,
+              match: function(p){ return !isInternal(p) && ((p.pse__Practice__r&&p.pse__Practice__r.Name)||'Unassigned')===rowLabel; }
             };
             showDetailView(kpiCopy);
           });
@@ -978,23 +948,46 @@ function renderDoughnutChart(){
   var ctx=document.getElementById('chart-doughnut').getContext('2d');
   state.charts.doughnut=new Chart(ctx,{type:'doughnut',data:{labels:['Green','Yellow','Red','Not Set'],datasets:[{data:data,backgroundColor:['#22c55e','#f59e0b','#ef4444','#4b5563'],borderWidth:2,borderColor:'#1a1d27',hoverBorderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{position:'bottom',labels:{color:'#8892aa',font:{size:11},padding:8,boxWidth:10}},tooltip:{callbacks:{label:function(c){return ' '+c.label+': '+c.raw;}}}}}});
 }
-function renderHealthChart(){
-  var fields=['pse__Financial_Status__c','pse__Schedule_Status__c','pse__Scope_Status__c'];
-  var g=[0,0,0],y=[0,0,0],r=[0,0,0],n=[0,0,0];
-  state.filtered.forEach(function(p){ fields.forEach(function(f,i){ var v=p[f]; if(!v)n[i]++; else if(v==='Green')g[i]++; else if(v==='Yellow')y[i]++; else if(v==='Red')r[i]++; else n[i]++; }); });
-  var ds=[{label:'Green',data:g,backgroundColor:'rgba(34,197,94,0.75)'},{label:'Yellow',data:y,backgroundColor:'rgba(245,158,11,0.75)'},{label:'Red',data:r,backgroundColor:'rgba(239,68,68,0.75)'},{label:'N/A',data:n,backgroundColor:'rgba(75,85,99,0.6)'}];
-  if(state.charts.health){ ds.forEach(function(d,i){ state.charts.health.data.datasets[i].data=d.data; }); state.charts.health.update('none'); return; }
-  var ctx=document.getElementById('chart-health').getContext('2d');
-  state.charts.health=new Chart(ctx,{type:'bar',data:{labels:['Financial','Schedule','Scope'],datasets:ds},options:{responsive:true,maintainAspectRatio:false,scales:{x:{stacked:true,ticks:{color:'#8892aa',font:{size:11}},grid:{color:'rgba(46,49,80,0.4)'}},y:{stacked:true,ticks:{color:'#8892aa',font:{size:11},stepSize:1},grid:{color:'rgba(46,49,80,0.4)'}}},plugins:{legend:{position:'bottom',labels:{color:'#8892aa',font:{size:11},padding:8,boxWidth:10}}}}});
+function renderPracticeChart(){
+  var counts={};
+  state.filtered.forEach(function(p){
+    if(isInternal(p)) return;
+    var prac=(p.pse__Practice__r&&p.pse__Practice__r.Name)?p.pse__Practice__r.Name:'Unassigned';
+    counts[prac]=(counts[prac]||0)+1;
+  });
+  var sorted=Object.keys(counts).sort(function(a,b){return counts[b]-counts[a];});
+  var labels=sorted; var data=sorted.map(function(k){return counts[k];});
+  var colors=sorted.map(function(k){return PRAC_COLORS[k]||'#8892aa';});
+  if(state.charts.practice){
+    state.charts.practice.data.labels=labels;
+    state.charts.practice.data.datasets[0].data=data;
+    state.charts.practice.data.datasets[0].backgroundColor=colors;
+    state.charts.practice.update('none'); return;
+  }
+  var ctx=document.getElementById('chart-practice').getContext('2d');
+  state.charts.practice=new Chart(ctx,{type:'bar',data:{labels:labels,datasets:[{data:data,backgroundColor:colors,borderRadius:4}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,scales:{x:{ticks:{color:'#8892aa',font:{size:11},stepSize:1},grid:{color:'rgba(46,49,80,0.4)'}},y:{ticks:{color:'#555',font:{size:11}},grid:{display:false}}},plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return ' '+c.raw+' projects';}}}}
+  }});
 }
-function renderCompleteChart(){
-  var projects=state.filtered.filter(function(p){ return p.psa_pm_PercentComplete__c!=null; }).slice().sort(function(a,b){ return b.psa_pm_PercentComplete__c-a.psa_pm_PercentComplete__c; }).slice(0,15);
-  var labels=projects.map(function(p){ var n=p.Name||''; return n.length>30?n.slice(0,28)+'…':n; });
-  var data=projects.map(function(p){ return p.psa_pm_PercentComplete__c; });
-  var colors=data.map(function(v){ return v>=75?'rgba(34,197,94,0.75)':v>=40?'rgba(59,130,246,0.75)':'rgba(245,158,11,0.75)'; });
-  if(state.charts.complete){ state.charts.complete.data.labels=labels; state.charts.complete.data.datasets[0].data=data; state.charts.complete.data.datasets[0].backgroundColor=colors; state.charts.complete.update('none'); return; }
-  var ctx=document.getElementById('chart-complete').getContext('2d');
-  state.charts.complete=new Chart(ctx,{type:'bar',data:{labels:labels,datasets:[{label:'% Complete',data:data,backgroundColor:colors,borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',scales:{x:{min:0,max:100,ticks:{color:'#8892aa',font:{size:10},callback:function(v){return v+'%';}},grid:{color:'rgba(46,49,80,0.4)'}},y:{ticks:{color:'#8892aa',font:{size:10}},grid:{display:false}}},plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return ' '+c.raw+'%';}}}}}});
+function renderBillingChart(){
+  var counts={};
+  state.filtered.forEach(function(p){
+    if(isInternal(p)) return;
+    var bt=p.pse__Billing_Type__c||'Unassigned';
+    counts[bt]=(counts[bt]||0)+1;
+  });
+  var sorted=Object.keys(counts).sort(function(a,b){return counts[b]-counts[a];});
+  var labels=sorted; var data=sorted.map(function(k){return counts[k];});
+  var palette=['rgba(1,118,211,0.75)','rgba(86,174,238,0.75)','rgba(34,197,94,0.75)','rgba(245,158,11,0.75)','rgba(139,92,246,0.75)','rgba(239,68,68,0.75)','rgba(16,185,129,0.75)','rgba(251,146,60,0.75)'];
+  var colors=sorted.map(function(_,i){return palette[i%palette.length];});
+  if(state.charts.billing){
+    state.charts.billing.data.labels=labels;
+    state.charts.billing.data.datasets[0].data=data;
+    state.charts.billing.data.datasets[0].backgroundColor=colors;
+    state.charts.billing.update('none'); return;
+  }
+  var ctx=document.getElementById('chart-billing').getContext('2d');
+  state.charts.billing=new Chart(ctx,{type:'bar',data:{labels:labels,datasets:[{data:data,backgroundColor:colors,borderRadius:4}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,scales:{x:{ticks:{color:'#8892aa',font:{size:11},stepSize:1},grid:{color:'rgba(46,49,80,0.4)'}},y:{ticks:{color:'#555',font:{size:11}},grid:{display:false}}},plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return ' '+c.raw+' projects';}}}}
+  }});
 }
 
 function renderMainTableHeader(){
@@ -1028,7 +1021,7 @@ function refreshMain(){
     btn.className='dm-filter-btn'+(isActive?' active':'');
     btn.style.borderColor=isActive?dm.color:''; btn.style.color=isActive?dm.color:'';
   });
-  renderKPIs(); renderDoughnutChart(); renderHealthChart(); renderCompleteChart();
+  renderKPIs(); renderDoughnutChart(); renderPracticeChart(); renderBillingChart();
   renderMainTableHeader(); renderMainTableBody();
 }
 
