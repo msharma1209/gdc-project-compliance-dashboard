@@ -73,6 +73,13 @@
   .kpi-label { font-size: 0.72rem; color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; line-height: 1.3; }
   .kpi-value { font-size: 2rem; font-weight: 700; line-height: 1; color: var(--text); }
   .kpi-note  { font-size: 0.68rem; color: var(--muted); margin-top: 4px; }
+  /* ── Category breakdown card ── */
+  .kpi-breakdown { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+  .kpi-breakdown-row { display: flex; align-items: center; gap: 6px; cursor: pointer; border-radius: 4px; padding: 2px 4px; transition: background 0.12s; }
+  .kpi-breakdown-row:hover { background: rgba(255,255,255,0.06); }
+  .kpi-breakdown-label { font-size: 0.68rem; color: var(--muted); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .kpi-breakdown-count { font-size: 0.85rem; font-weight: 700; color: var(--text); min-width: 20px; text-align: right; }
+  .kpi-breakdown-bar { height: 4px; border-radius: 2px; margin-top: 1px; transition: width 0.3s; }
 
   /* ── Charts Row ── */
   #charts-row { display: grid; grid-template-columns: 1fr 2fr 2fr; gap: 16px; }
@@ -411,13 +418,20 @@ var KPI_DEFS = [
   { id:'planned_lt_billed',label:'Planned < Billed Hours',   icon:'⚠️', border:'yellow',
     desc:'Planned hours are less than billed hours (negative remaining)',
     match: function(p) { return !isInternal(p) && p.PSA_PM_Total_Billable_Hours_Remaining__c!==null && p.PSA_PM_Total_Billable_Hours_Remaining__c<0; } },
-  { id:'no_category',      label:'Project Categorization',   icon:'🗂️', border:'yellow',
-    desc:'Projects missing a Practice categorization (not yet assigned to Consulting Services or Managed Services)',
-    match: function(p) {
-      if (isInternal(p)) return false;
-      var prac = (p.pse__Practice__r && p.pse__Practice__r.Name) ? p.pse__Practice__r.Name.toLowerCase() : '';
-      return prac !== 'consulting services' && prac !== 'managed services';
-    } },
+  { id:'no_category',      label:'By Practice Type',          icon:'🗂️', border:'blue',
+    desc:'Projects by Practice',
+    breakdown: true,
+    getBreakdown: function(projects) {
+      var counts = {};
+      projects.forEach(function(p) {
+        var prac = (p.pse__Practice__r && p.pse__Practice__r.Name) ? p.pse__Practice__r.Name : 'Unassigned';
+        counts[prac] = (counts[prac] || 0) + 1;
+      });
+      // sort by count desc
+      return Object.keys(counts).sort(function(a,b){ return counts[b]-counts[a]; }).map(function(k){ return {label:k, count:counts[k]}; });
+    },
+    match: function(p) { return !isInternal(p); }
+  },
   { id:'adoption_upcoming',label:'Upcoming Adoption Events', icon:'🎯', border:'blue',
     desc:'Adoption event in Forecast state with due date in the next 30 days',
     match: function(p) { return !isInternal(p) && hasUpcomingForecastAdoption(p); } },
@@ -773,12 +787,56 @@ function renderKPIs() {
     card.className='kpi-card border-'+kpi.border+(kpi.placeholder?' placeholder-card':'');
     var icon=document.createElement('span'); icon.className='kpi-icon'; icon.textContent=kpi.icon;
     var label=document.createElement('div'); label.className='kpi-label'; label.textContent=kpi.label;
-    var val=document.createElement('div'); val.className='kpi-value';
-    if(kpi.placeholder){
-      val.textContent='—';
+
+    if(kpi.breakdown){
+      // ── Breakdown card: show per-category rows ──
+      var activeProjects = state.filtered.filter(kpi.match);
+      var rows = kpi.getBreakdown(activeProjects);
+      var total = activeProjects.length;
+      card.appendChild(icon); card.appendChild(label);
+      var bdWrap = document.createElement('div'); bdWrap.className='kpi-breakdown';
+      var PRAC_COLORS = {'Consulting Services':'#3b82f6','Managed Services':'#22c55e','Unassigned':'#ef4444'};
+      rows.forEach(function(row){
+        var bdRow = document.createElement('div'); bdRow.className='kpi-breakdown-row';
+        var color = PRAC_COLORS[row.label] || '#8892aa';
+        // bar + label + count stacked
+        var inner = document.createElement('div'); inner.style.width='100%';
+        var top = document.createElement('div'); top.style.display='flex'; top.style.justifyContent='space-between'; top.style.alignItems='center';
+        var lbl = document.createElement('span'); lbl.className='kpi-breakdown-label'; lbl.textContent=row.label;
+        var cnt = document.createElement('span'); cnt.className='kpi-breakdown-count'; cnt.textContent=String(row.count);
+        top.appendChild(lbl); top.appendChild(cnt);
+        var bar = document.createElement('div'); bar.className='kpi-breakdown-bar';
+        bar.style.width = (total>0 ? Math.round((row.count/total)*100) : 0)+'%';
+        bar.style.background = color;
+        inner.appendChild(top); inner.appendChild(bar);
+        bdRow.appendChild(inner);
+        // click — filter detail view to this practice
+        (function(pracName){
+          bdRow.addEventListener('click', function(e){
+            e.stopPropagation();
+            var kpiCopy = {
+              id: 'practice_'+pracName.toLowerCase().replace(/\s+/g,'_'),
+              label: pracName,
+              icon: kpi.icon,
+              desc: 'Projects with Practice: '+pracName,
+              match: function(p){ return !isInternal(p) && (p.pse__Practice__r&&p.pse__Practice__r.Name)===pracName; }
+            };
+            showDetailView(kpiCopy);
+          });
+        })(row.label);
+        bdWrap.appendChild(bdRow);
+      });
+      card.appendChild(bdWrap);
+      // clicking the card body itself shows all active projects
+      card.addEventListener('click', function(){ showDetailView(kpi); });
+
+    } else if(kpi.placeholder){
+      var val=document.createElement('div'); val.className='kpi-value'; val.textContent='—';
       var note=document.createElement('div'); note.className='kpi-note'; note.textContent='Requires Milestone data';
       card.appendChild(icon); card.appendChild(label); card.appendChild(val); card.appendChild(note);
+
     } else {
+      var val=document.createElement('div'); val.className='kpi-value';
       var count=state.filtered.filter(kpi.match).length;
       val.textContent=String(count);
       card.appendChild(icon); card.appendChild(label); card.appendChild(val);
