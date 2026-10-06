@@ -597,7 +597,7 @@ function getSortVal(p, col) {
     case 'margin':       return p.PSA_PM_Margin_Percent__c!=null?p.PSA_PM_Margin_Percent__c:-99999;
     case 'planned_hrs':  return p.pse__Planned_Hours__c!=null?p.pse__Planned_Hours__c:-1;
     case 'timecard':     return p.psa_tm_Last_Time_Entry_Date__c||'';
-    case 'csat':         return p.pse_pm_Last_Customer_Survey_Created__c||'';
+    case 'csat':         return p._lastCSAT||'';
     case 'adoption_exc': return p.PSA_Adoption_Event_Not_Required_Reason__c||'';
     case 'practice':     return ((p.pse__Practice__r&&p.pse__Practice__r.Name)||'').toLowerCase();
     case 'last_report':  return p._lastStatusReport||'';
@@ -697,11 +697,11 @@ function buildDetailRow(p) {
   }
   tdTC.appendChild(tcS); tr.appendChild(tdTC);
 
-  // 11. Last CSAT
+  // 11. Last CSAT (MAX survey response date from Customer_Surveys__r sub-query)
   var tdCS=document.createElement('td');
-  var csS=document.createElement('span'); csS.textContent=fmtDate(p.pse_pm_Last_Customer_Survey_Created__c);
-  csS.style.color=p.pse_pm_Last_Customer_Survey_Created__c?'var(--muted)':'var(--muted)';
-  if(!p.pse_pm_Last_Customer_Survey_Created__c){ csS.textContent='—'; csS.style.color='var(--muted)'; }
+  var csS=document.createElement('span');
+  if(!p._lastCSAT){ csS.textContent='—'; csS.style.color='var(--muted)'; }
+  else { csS.textContent=fmtDate(p._lastCSAT); csS.style.color='var(--muted)'; }
   tdCS.appendChild(csS); tr.appendChild(tdCS);
 
   // 12. Adoption Not Required reason
@@ -992,9 +992,15 @@ function refreshMain(){
 function normaliseProjects(records) {
   records.forEach(function(p) {
     // MAX(PSA_PM_Status_Report_Week__c) from Status_Reports__r sub-query
-    var recs = p.Status_Reports__r && p.Status_Reports__r.records;
-    p._lastStatusReport = (recs && recs.length > 0)
-      ? recs[0].PSA_PM_Status_Report_Week__c   // already ordered DESC LIMIT 1
+    var srRecs = p.Status_Reports__r && p.Status_Reports__r.records;
+    p._lastStatusReport = (srRecs && srRecs.length > 0)
+      ? srRecs[0].PSA_PM_Status_Report_Week__c   // already ordered DESC LIMIT 1
+      : null;
+
+    // MAX(psa_pm_Survey_Response_Date__c) from Customer_Surveys__r sub-query
+    var csRecs = p.Customer_Surveys__r && p.Customer_Surveys__r.records;
+    p._lastCSAT = (csRecs && csRecs.length > 0)
+      ? csRecs[0].psa_pm_Survey_Response_Date__c  // already ordered DESC LIMIT 1
       : null;
   });
   return records;
