@@ -317,6 +317,46 @@ function handleUpdateToken(req, res) {
   });
 }
 
+// ── /api/lookup-dms — find Contact IDs for known DM names ───────────────────
+var DM_NAMES_TO_FIND = [
+  'Megha Sharma','Hanumanth Kulkarni','Upasana Barbaruah','Suman Viswanathan',
+  'Aparna Kochukuttan','Akhil Naik','Shiladitya Biswas','Edwin Sukumar',
+  'Arun Kumar','Ramesh Dasaranna Mattehunta','Naveen Bendigeri','Kamalesh Purushotham',
+  'Chandrasekar K','Abhishek Kumar','Rahul K','Sowmya Shivashankar',
+  'Ayush Sharma','Devendar Yadav','Chinmayanand Jha','Nimisha Sarma',
+  'Dhananjay Kumar Sinha','Muthukumar Somasundaram','Hemanth'
+];
+
+function handleLookupDMs(res) {
+  if (!tokenCache.accessToken) {
+    res.writeHead(503, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'No SF token set. Visit /admin to update the token.' }));
+    return;
+  }
+  // Query 1: Contacts who are PM on any active project
+  var pmSoql = "SELECT Id, Name FROM Contact WHERE Id IN (SELECT pse__Project_Manager__c FROM pse__Proj__c WHERE pse__Project_Manager__r.Name IN (" +
+    DM_NAMES_TO_FIND.map(function(n){ return "'"+n+"'"; }).join(',') + ")) ORDER BY Name";
+  // Query 2: Contacts assigned as Delivery Manager role
+  var dmSoql = "SELECT Id, Name FROM Contact WHERE Id IN (SELECT pse__Resource__c FROM pse__Assignment__c WHERE pse__Role__c = 'Delivery Manager' AND pse__Resource__r.Name IN (" +
+    DM_NAMES_TO_FIND.map(function(n){ return "'"+n+"'"; }).join(',') + ")) ORDER BY Name";
+
+  var combined = {};
+  var pending = 2;
+  function done(err, data) {
+    if (err) { res.writeHead(502, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:err.message})); return; }
+    (data.records||[]).forEach(function(r){ combined[r.Id] = r.Name; });
+    pending--;
+    if (pending === 0) {
+      var out = Object.keys(combined).map(function(id){ return {id:id, name:combined[id]}; });
+      out.sort(function(a,b){ return a.name.localeCompare(b.name); });
+      res.writeHead(200, {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'});
+      res.end(JSON.stringify(out, null, 2));
+    }
+  }
+  fetchSOQL(pmSoql, tokenCache.accessToken, tokenCache.instanceUrl, done);
+  fetchSOQL(dmSoql, tokenCache.accessToken, tokenCache.instanceUrl, done);
+}
+
 // ── Static file serving from public/ ─────────────────────────────────────────
 function handleStatic(reqPath, res) {
   if (reqPath === '/' || reqPath === '') reqPath = '/index.html';
@@ -372,6 +412,8 @@ var server = http.createServer(function (req, res) {
 
   if (reqPath === '/api/projects') {
     handleApiProjects(res);
+  } else if (reqPath === '/api/lookup-dms') {
+    handleLookupDMs(res);
   } else if (reqPath === '/admin') {
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' });
     res.end(ADMIN_HTML);
