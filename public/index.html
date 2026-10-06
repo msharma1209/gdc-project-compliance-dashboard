@@ -432,6 +432,19 @@ var KPI_DEFS = [
     },
     match: function(p) { return !isInternal(p); }
   },
+  { id:'by_billing',       label:'By Billing Type',          icon:'💳', border:'blue',
+    desc:'Projects by Billing Type',
+    breakdown: true,
+    getBreakdown: function(projects) {
+      var counts = {};
+      projects.forEach(function(p) {
+        var bt = p.pse__Billing_Type__c || 'Unassigned';
+        counts[bt] = (counts[bt] || 0) + 1;
+      });
+      return Object.keys(counts).sort(function(a,b){ return counts[b]-counts[a]; }).map(function(k){ return {label:k, count:counts[k]}; });
+    },
+    match: function(p) { return !isInternal(p); }
+  },
   { id:'adoption_upcoming',label:'Upcoming Adoption Events', icon:'🎯', border:'blue',
     desc:'Adoption event in Forecast state with due date in the next 30 days',
     match: function(p) { return !isInternal(p) && hasUpcomingForecastAdoption(p); } },
@@ -795,7 +808,12 @@ function renderKPIs() {
       var total = activeProjects.length;
       card.appendChild(icon); card.appendChild(label);
       var bdWrap = document.createElement('div'); bdWrap.className='kpi-breakdown';
-      var PRAC_COLORS = {'Consulting Services':'#3b82f6','Managed Services':'#22c55e','Unassigned':'#ef4444'};
+      var PRAC_COLORS = {
+        'Consulting Services':'#3b82f6','Managed Services':'#22c55e',
+        'Fixed Price':'#8b5cf6','Time and Materials':'#f59e0b',
+        'Service units':'#06b6d4','Non-Billable':'#6b7280',
+        'Unassigned':'#ef4444'
+      };
       rows.forEach(function(row){
         var bdRow = document.createElement('div'); bdRow.className='kpi-breakdown-row';
         var color = PRAC_COLORS[row.label] || '#8892aa';
@@ -811,19 +829,22 @@ function renderKPIs() {
         inner.appendChild(top); inner.appendChild(bar);
         bdRow.appendChild(inner);
         // click — filter detail view to this practice
-        (function(pracName){
+        (function(rowLabel, kpiDef){
           bdRow.addEventListener('click', function(e){
             e.stopPropagation();
+            var isBilling = kpiDef.id === 'by_billing';
             var kpiCopy = {
-              id: 'practice_'+pracName.toLowerCase().replace(/\s+/g,'_'),
-              label: pracName,
-              icon: kpi.icon,
-              desc: 'Projects with Practice: '+pracName,
-              match: function(p){ return !isInternal(p) && (p.pse__Practice__r&&p.pse__Practice__r.Name)===pracName; }
+              id: kpiDef.id+'_'+rowLabel.toLowerCase().replace(/\s+/g,'_'),
+              label: rowLabel,
+              icon: kpiDef.icon,
+              desc: (isBilling ? 'Projects with Billing Type: ' : 'Projects with Practice: ') + rowLabel,
+              match: isBilling
+                ? function(p){ return !isInternal(p) && (p.pse__Billing_Type__c||'Unassigned')===rowLabel; }
+                : function(p){ return !isInternal(p) && ((p.pse__Practice__r&&p.pse__Practice__r.Name)||'Unassigned')===rowLabel; }
             };
             showDetailView(kpiCopy);
           });
-        })(row.label);
+        })(row.label, kpi);
         bdWrap.appendChild(bdRow);
       });
       card.appendChild(bdWrap);
