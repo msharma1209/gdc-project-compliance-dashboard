@@ -25,6 +25,9 @@
   a { color: #7ca4f4; text-decoration: none; }
   a:hover { text-decoration: underline; }
 
+  /* ── Token expiry banner ── */
+  #token-banner { position: sticky; top: 0; z-index: 200; }
+
   /* ── Header ── */
   #app-header {
     position: sticky; top: 0; z-index: 100;
@@ -472,22 +475,52 @@ var KPI_DEFS = [
 ];
 
 /* ── FETCH ── */
+function showTokenBanner(msg) {
+  var existing = document.getElementById('token-banner');
+  if (existing) existing.remove();
+  var banner = document.createElement('div');
+  banner.id = 'token-banner';
+  banner.style.cssText = 'background:#7f1d1d;color:#fca5a5;padding:10px 24px;font-size:0.8rem;display:flex;align-items:center;gap:10px;border-bottom:1px solid #991b1b;';
+  var icon = document.createElement('span'); icon.textContent = '⚠️';
+  var txt = document.createElement('span'); txt.textContent = msg;
+  banner.appendChild(icon); banner.appendChild(txt);
+  document.body.insertBefore(banner, document.body.firstChild);
+}
+function hideTokenBanner() {
+  var b = document.getElementById('token-banner'); if (b) b.remove();
+}
+
 function fetchLiveData() {
   var btn=document.getElementById('refresh-btn');
   btn.classList.add('loading'); clearEl(btn);
   var sp=document.createElement('span'); sp.className='spinner'; btn.appendChild(sp);
   btn.appendChild(document.createTextNode(' Fetching…'));
   return fetch('/api/projects')
-    .then(function(res){ if(!res.ok) throw new Error('HTTP '+res.status); return res.json(); })
+    .then(function(res){
+      if(res.status===401||res.status===403){
+        throw new Error('TOKEN_EXPIRED');
+      }
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      return res.json();
+    })
     .then(function(data){
       var records=(data&&data.records)?data.records:[];
+      // Salesforce returns errorCode on auth failure inside a 200
+      if(data&&data[0]&&data[0].errorCode==='INVALID_SESSION_ID'){
+        throw new Error('TOKEN_EXPIRED');
+      }
       if(records.length===0) throw new Error('Empty result');
+      hideTokenBanner();
       btn.classList.remove('loading'); clearEl(btn); btn.textContent='↺ Refresh';
       return {records:records,source:'live'};
     })
     .catch(function(err){
-      console.warn('Live fetch failed ('+err.message+'), using bundled data.');
       btn.classList.remove('loading'); clearEl(btn); btn.textContent='↺ Refresh';
+      if(err.message==='TOKEN_EXPIRED'){
+        showTokenBanner('Salesforce token has expired — showing cached data. Update SF_TOKEN in Render environment to restore live data.');
+      } else {
+        console.warn('Live fetch failed ('+err.message+'), using bundled data.');
+      }
       return {records:BUNDLED_DATA,source:'bundled'};
     });
 }
