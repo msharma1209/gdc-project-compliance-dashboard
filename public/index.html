@@ -736,17 +736,24 @@ function buildDetailRow(p) {
   }
   tdCS.appendChild(csS); tr.appendChild(tdCS);
 
-  // 12. Forecasted AE Date
+  // 12. Forecasted AE Dates — all stacked, each red if past
   var tdAE=document.createElement('td');
-  var aeS=document.createElement('span');
-  if(!p._forecastedAEDate){
-    aeS.textContent='—'; aeS.style.color='var(--muted)';
+  tdAE.style.lineHeight='1.6';
+  if(!p._forecastedAEDates||p._forecastedAEDates.length===0){
+    var aeEmpty=document.createElement('span');
+    aeEmpty.textContent='—'; aeEmpty.style.color='var(--muted)';
+    tdAE.appendChild(aeEmpty);
   } else {
-    aeS.textContent=fmtDate(p._forecastedAEDate);
-    var aeD=parseDate(p._forecastedAEDate);
-    aeS.style.color=(aeD&&aeD<TODAY)?'#dc2626':'var(--muted)';
+    p._forecastedAEDates.forEach(function(dateStr){
+      var aeS=document.createElement('div');
+      aeS.textContent=fmtDate(dateStr);
+      var aeD=parseDate(dateStr);
+      aeS.style.color=(aeD&&aeD<TODAY)?'#dc2626':'var(--muted)';
+      aeS.style.fontSize='0.78rem';
+      tdAE.appendChild(aeS);
+    });
   }
-  tdAE.appendChild(aeS); tr.appendChild(tdAE);
+  tr.appendChild(tdAE);
 
   // 13. Adoption Not Required reason
   var tdAR=document.createElement('td');
@@ -1043,23 +1050,20 @@ function normaliseProjects(records) {
       ? csRecs[0].psa_pm_Survey_Sent_Date__c  // already ordered DESC LIMIT 1 by sent date
       : null;
 
-    // Forecasted AE date — earliest Target Date (PSA_PM_Start_Date__c) from Forecast/Forecasted AEs
+    // All Forecasted AE Target Dates (PSA_PM_Start_Date__c), sorted ascending
     var aeRecs = p.Adoption_Events__r && p.Adoption_Events__r.records;
-    p._forecastedAEDate = null;
+    p._forecastedAEDates = [];  // array — all dates
+    p._forecastedAEDate  = null; // earliest — used for sorting
     if (aeRecs) {
-      var fDates = [];
       aeRecs.forEach(function(e) {
         var st = (e.PSA_PM_Adoption_Event_Status__c || '').toLowerCase();
         if (st === 'forecast' || st === 'forecasted') {
-          // Use Target Date (PSA_PM_Start_Date__c); fall back to Actual Date if target is null
           var d = e.PSA_PM_Start_Date__c || e.PSA_PM_Adoption_Event_Date__c;
-          if (d) fDates.push(d);
+          if (d) p._forecastedAEDates.push(d);
         }
       });
-      if (fDates.length > 0) {
-        fDates.sort();  // ISO dates sort lexicographically
-        p._forecastedAEDate = fDates[0];  // earliest forecasted AE target date
-      }
+      p._forecastedAEDates.sort();  // ISO dates sort lexicographically
+      if (p._forecastedAEDates.length > 0) p._forecastedAEDate = p._forecastedAEDates[0];
     }
 
     // Determine which DM owns this project — either as Project Manager or as
