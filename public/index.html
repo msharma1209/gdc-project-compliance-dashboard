@@ -370,13 +370,19 @@ function hasUpcomingForecastAdoption(p) {
     return status === 'forecast' || status === 'forecasted';
   });
 }
+// Helper: is a milestone "billable" — either Include_In_Financials checked OR RecordType = Billing
+function isBillableMilestone(m) {
+  if (m.pse__Include_In_Financials__c) return true;
+  var rt = m.RecordType && m.RecordType.Name;
+  return rt && rt.toLowerCase() === 'billing';
+}
 // Helper: does the project have a billable milestone due within 30 days?
 function hasBillableMilestoneDueSoon(p) {
   var ms = p.pse__Milestones__r && p.pse__Milestones__r.records;
   if (!ms || ms.length === 0) return false;
   var in30 = new Date(TODAY.getTime() + 30*24*60*60*1000);
   return ms.some(function(m) {
-    if (!m.pse__Include_In_Financials__c) return false;
+    if (!isBillableMilestone(m)) return false;
     var d = parseDate(m.pse__Target_Date__c);
     return d && d >= TODAY && d <= in30;
   });
