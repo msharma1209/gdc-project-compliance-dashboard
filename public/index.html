@@ -350,15 +350,13 @@ function hasMissingAdoptionEvent(p) {
   if (events && events.length > 0) return false;
   return true;
 }
-// Helper: does the project have an adoption event in Forecast state due within 30 days?
+// Helper: does the project have any adoption event in Forecast/Forecasted state?
 function hasUpcomingForecastAdoption(p) {
   var events = p.Adoption_Events__r && p.Adoption_Events__r.records;
   if (!events || events.length === 0) return false;
-  var in30 = new Date(TODAY.getTime() + 30*24*60*60*1000);
   return events.some(function(e) {
-    if ((e.PSA_PM_Adoption_Event_Status__c || '').toLowerCase() !== 'forecast') return false;
-    var d = parseDate(e.PSA_PM_Adoption_Event_Date__c);
-    return d && d >= TODAY && d <= in30;
+    var status = (e.PSA_PM_Adoption_Event_Status__c || '').toLowerCase();
+    return status === 'forecast' || status === 'forecasted';
   });
 }
 // Helper: does the project have a billable milestone due within 30 days?
@@ -465,7 +463,7 @@ var KPI_DEFS = [
     match: function(p) { return !isInternal(p); }
   },
   { id:'adoption_upcoming',label:'Upcoming Adoption Events', icon:'🎯', border:'blue',
-    desc:'Adoption event in Forecast state with due date in the next 30 days',
+    desc:'Projects with at least one Adoption Event in Forecast/Forecasted status',
     match: function(p) { return !isInternal(p) && hasUpcomingForecastAdoption(p); } },
   { id:'adoption_missing', label:'Missing Adoption Events',  icon:'❌',  border:'red',
     desc:'Projects with no AE record at all AND no exemption reason set',
