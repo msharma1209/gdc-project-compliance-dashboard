@@ -66,6 +66,7 @@ var SOQL = [
   'psa_tm_Last_Time_Entry_Date__c, PSA_Adoption_Event_Not_Required_Reason__c,',
   'pse_pm_Last_Customer_Survey_Created__c, PSA_Status_report_on_Project__c,',
   'psa_pm_Project_Sub_Type__c, pse__Practice__r.Name, pse__Region__r.Name,',
+  'pse__Billing_Type__c, PSA_PM_Margin_Percent__c,',
   // Adoption Events sub-query
   '(SELECT Id, PSA_PM_Adoption_Event_Status__c, PSA_PM_Adoption_Event_Date__c FROM Adoption_Events__r),',
   // Milestones sub-query — billable milestones with a target date

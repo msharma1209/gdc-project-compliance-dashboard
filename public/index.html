@@ -95,7 +95,7 @@
   #search-box:focus, #detail-search-box:focus { border-color: #5b6cf9; }
   #row-count, #detail-row-count { font-size: 0.78rem; color: var(--muted); margin-left: auto; }
   .table-wrap { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border); }
-  table { width: 100%; border-collapse: collapse; min-width: 1100px; }
+  table { width: 100%; border-collapse: collapse; min-width: 1500px; }
   thead tr { background: var(--surface2); border-bottom: 1px solid var(--border); }
   th { padding: 10px 12px; text-align: left; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); white-space: nowrap; cursor: pointer; user-select: none; transition: color 0.15s; }
   th:hover { color: var(--text); }
@@ -395,7 +395,7 @@ var KPI_DEFS = [
     match: function(p) { var d=parseDate(p.pse__End_Date__c); var oct=new Date(Date.UTC(2026,9,31,12,0,0)); return !isInternal(p) && d&&d>=TODAY&&d<=oct; } },
   { id:'low_margin',       label:'Low Margin (<50%)',        icon:'💸', border:'red',
     desc:'Projects with margin less than 50%',
-    match: function(p) { return !isInternal(p) && p.psa_pm_PercentComplete__c!==null && p.psa_pm_PercentComplete__c!==undefined && p.psa_pm_PercentComplete__c<50; } },
+    match: function(p) { return !isInternal(p) && p.PSA_PM_Margin_Percent__c!==null && p.PSA_PM_Margin_Percent__c!==undefined && p.PSA_PM_Margin_Percent__c<50; } },
   { id:'timecard',         label:'Timecard >30 Days',        icon:'🕐', border:'red',
     desc:'Latest timecard submission is more than 30 days ago',
     match: function(p) {
@@ -460,26 +460,10 @@ function applySearchFilter() {
   if(!q){ state.displayed=state.filtered.slice(); return; }
   state.displayed=state.filtered.filter(function(p){
     var acc=(p.pse__Account__r&&p.pse__Account__r.Name)?p.pse__Account__r.Name:'';
-    var dm=(p.pse__Project_Manager__r&&p.pse__Project_Manager__r.Name)?p.pse__Project_Manager__r.Name:'';
-    return (p.Name||'').toLowerCase().indexOf(q)!==-1||acc.toLowerCase().indexOf(q)!==-1||dm.toLowerCase().indexOf(q)!==-1;
+    var pm=(p.pse__Project_Manager__r&&p.pse__Project_Manager__r.Name)?p.pse__Project_Manager__r.Name:'';
+    var prac=(p.pse__Practice__r&&p.pse__Practice__r.Name)?p.pse__Practice__r.Name:'';
+    return (p.Name||'').toLowerCase().indexOf(q)!==-1||acc.toLowerCase().indexOf(q)!==-1||pm.toLowerCase().indexOf(q)!==-1||prac.toLowerCase().indexOf(q)!==-1;
   });
-}
-function getSortVal(p,col){
-  switch(col){
-    case 'name':      return (p.Name||'').toLowerCase();
-    case 'account':   return ((p.pse__Account__r&&p.pse__Account__r.Name)||'').toLowerCase();
-    case 'dm':        return ((p.pse__Project_Manager__r&&p.pse__Project_Manager__r.Name)||'').toLowerCase();
-    case 'status':    return p.pse__Project_Status__c||'';
-    case 'pct':       return p.psa_pm_PercentComplete__c!=null?p.psa_pm_PercentComplete__c:-1;
-    case 'enddate':   return p.pse__End_Date__c||'';
-    case 'financial': return p.pse__Financial_Status__c||'';
-    case 'schedule':  return p.pse__Schedule_Status__c||'';
-    case 'resources': return p.PSA_PM_Resources__c||'';
-    case 'hrsleft':   return p.PSA_PM_Total_Billable_Hours_Remaining__c!=null?p.PSA_PM_Total_Billable_Hours_Remaining__c:-99999;
-    case 'subtype':   return p.psa_pm_Project_Sub_Type__c||'';
-    case 'portfolio': return ((p.psa_pm_Portfolio_Manager__r&&p.psa_pm_Portfolio_Manager__r.Name)||'').toLowerCase();
-    default: return '';
-  }
 }
 function applySort(list, col, dir) {
   if (!col) return;
@@ -498,130 +482,168 @@ function rowAlertClass(p){
   var red=p.pse__Project_Status__c==='Red'||p.psa_Overall_Project_Status_Trend__c==='Red';
   var late=!p.psa_tm_Last_Time_Entry_Date__c||(function(){ var d=parseDate(p.psa_tm_Last_Time_Entry_Date__c); return d&&daysDiff(TODAY,d)>30; })();
   if(pastEnd||red||late) return 'row-alert-red';
-  if(!p.pse__Project_Status__c||!p.pse__Planned_Hours__c||p.pse__Planned_Hours__c===0) return 'row-alert-yellow';
+  var lowMargin=p.PSA_PM_Margin_Percent__c!=null&&p.PSA_PM_Margin_Percent__c<50;
+  if(!p.pse__Project_Status__c||!p.pse__Planned_Hours__c||p.pse__Planned_Hours__c===0||lowMargin) return 'row-alert-yellow';
   return '';
 }
 
 /* ── COLUMNS ── */
-// Main dashboard table — same 8 columns as detail pages
-var MAIN_COLUMNS = [
-  {key:'name',      label:'Project Name',        sortable:true },
-  {key:'region',    label:'Region',              sortable:true },
-  {key:'pm',        label:'Project Manager',     sortable:true },
-  {key:'dm',        label:'Delivery Manager',    sortable:true },
-  {key:'status',    label:'Status',              sortable:true },
-  {key:'timecard',  label:'Last Timecard Entry', sortable:true },
-  {key:'subtype',   label:'Sub-Type',            sortable:true },
-  {key:'margin',    label:'Margin %',            sortable:true }
+// Same 13 columns used on both main dashboard and all KPI drill-down pages
+var SHARED_COLUMNS = [
+  {key:'name',         label:'Project Name',        sortable:true },
+  {key:'pm',           label:'Project Manager',     sortable:true },
+  {key:'region',       label:'Region',              sortable:true },
+  {key:'status',       label:'Status',              sortable:true },
+  {key:'stage',        label:'Stage',               sortable:true },
+  {key:'enddate',      label:'End Date',            sortable:true },
+  {key:'billing',      label:'Billing Type',        sortable:true },
+  {key:'margin',       label:'Margin %',            sortable:true },
+  {key:'planned_hrs',  label:'Planned Hours',       sortable:true },
+  {key:'timecard',     label:'Last Timecard',       sortable:true },
+  {key:'csat',         label:'Last CSAT',           sortable:true },
+  {key:'adoption_exc', label:'Adoption Not Req.',   sortable:true },
+  {key:'practice',     label:'Practice',            sortable:true }
 ];
-
-// Detail / KPI drill-down page columns
-var DETAIL_COLUMNS = [
-  {key:'name',      label:'Project Name',         sortable:true },
-  {key:'region',    label:'Region',               sortable:true },
-  {key:'pm',        label:'Project Manager',      sortable:true },
-  {key:'dm',        label:'Delivery Manager',     sortable:true },
-  {key:'status',    label:'Status',               sortable:true },
-  {key:'timecard',  label:'Last Timecard Entry',  sortable:true },
-  {key:'subtype',   label:'Sub-Type',             sortable:true },
-  {key:'margin',    label:'Margin %',             sortable:true }
-];
+var MAIN_COLUMNS   = SHARED_COLUMNS;
+var DETAIL_COLUMNS = SHARED_COLUMNS;
 
 /* ── SORT VALUE ── */
 function getSortVal(p, col) {
   switch(col) {
-    case 'name':      return (p.Name||'').toLowerCase();
-    case 'account':   return ((p.pse__Account__r&&p.pse__Account__r.Name)||'').toLowerCase();
-    case 'region':    return ((p.pse__Region__r&&p.pse__Region__r.Name)||'').toLowerCase();
-    case 'pm':        return ((p.pse__Project_Manager__r&&p.pse__Project_Manager__r.Name)||'').toLowerCase();
-    case 'dm':        return ((p.pse__Project_Manager__r&&p.pse__Project_Manager__r.Name)||'').toLowerCase();
-    case 'status':    return p.pse__Project_Status__c||'';
-    case 'timecard':  return p.psa_tm_Last_Time_Entry_Date__c||'';
-    case 'subtype':   return p.psa_pm_Project_Sub_Type__c||'';
-    case 'margin':    return p.psa_pm_PercentComplete__c!=null?p.psa_pm_PercentComplete__c:-1;
-    case 'pct':       return p.psa_pm_PercentComplete__c!=null?p.psa_pm_PercentComplete__c:-1;
-    case 'enddate':   return p.pse__End_Date__c||'';
-    case 'financial': return p.pse__Financial_Status__c||'';
-    case 'schedule':  return p.pse__Schedule_Status__c||'';
-    case 'resources': return p.PSA_PM_Resources__c||'';
-    case 'hrsleft':   return p.PSA_PM_Total_Billable_Hours_Remaining__c!=null?p.PSA_PM_Total_Billable_Hours_Remaining__c:-99999;
-    case 'portfolio': return ((p.psa_pm_Portfolio_Manager__r&&p.psa_pm_Portfolio_Manager__r.Name)||'').toLowerCase();
+    case 'name':         return (p.Name||'').toLowerCase();
+    case 'pm':           return ((p.pse__Project_Manager__r&&p.pse__Project_Manager__r.Name)||'').toLowerCase();
+    case 'region':       return ((p.pse__Region__r&&p.pse__Region__r.Name)||'').toLowerCase();
+    case 'status':       return p.pse__Project_Status__c||'';
+    case 'stage':        return p.pse__Stage__c||'';
+    case 'enddate':      return p.pse__End_Date__c||'';
+    case 'billing':      return p.pse__Billing_Type__c||'';
+    case 'margin':       return p.PSA_PM_Margin_Percent__c!=null?p.PSA_PM_Margin_Percent__c:-99999;
+    case 'planned_hrs':  return p.pse__Planned_Hours__c!=null?p.pse__Planned_Hours__c:-1;
+    case 'timecard':     return p.psa_tm_Last_Time_Entry_Date__c||'';
+    case 'csat':         return p.pse_pm_Last_Customer_Survey_Created__c||'';
+    case 'adoption_exc': return p.PSA_Adoption_Event_Not_Required_Reason__c||'';
+    case 'practice':     return ((p.pse__Practice__r&&p.pse__Practice__r.Name)||'').toLowerCase();
+    // legacy sort keys (used by charts/filter)
+    case 'account':      return ((p.pse__Account__r&&p.pse__Account__r.Name)||'').toLowerCase();
+    case 'dm':           return ((p.pse__Project_Manager__r&&p.pse__Project_Manager__r.Name)||'').toLowerCase();
+    case 'financial':    return p.pse__Financial_Status__c||'';
+    case 'schedule':     return p.pse__Schedule_Status__c||'';
+    case 'resources':    return p.PSA_PM_Resources__c||'';
+    case 'hrsleft':      return p.PSA_PM_Total_Billable_Hours_Remaining__c!=null?p.PSA_PM_Total_Billable_Hours_Remaining__c:-99999;
+    case 'portfolio':    return ((p.psa_pm_Portfolio_Manager__r&&p.psa_pm_Portfolio_Manager__r.Name)||'').toLowerCase();
     default: return '';
   }
 }
 
-/* ── BUILD MAIN ROW — reuses detail row (same 8 columns) ── */
-function buildMainRow(p) { return buildDetailRow(p); }
-
-/* ── BUILD DETAIL ROW (used on both main table and KPI drill-down pages) ── */
+/* ── BUILD ROW (used on both main table and all KPI drill-down pages — 13 columns) ── */
 function buildDetailRow(p) {
   var tr=document.createElement('tr'); tr.setAttribute('data-id',p.Id);
 
-  // Project Name (link)
-  var tdN=document.createElement('td'); tdN.style.maxWidth='280px';
+  // 1. Project Name (link to SF)
+  var tdN=document.createElement('td'); tdN.style.maxWidth='260px';
   var lnk=document.createElement('a');
   lnk.href=SF_INSTANCE+'/lightning/r/pse__Proj__c/'+p.Id+'/view';
   lnk.target='_blank'; lnk.rel='noopener noreferrer';
-  var nm=p.Name||'—'; lnk.textContent=nm.length>50?nm.slice(0,48)+'…':nm; lnk.title=nm;
+  var nm=p.Name||'—'; lnk.textContent=nm.length>48?nm.slice(0,46)+'…':nm; lnk.title=nm;
   tdN.appendChild(lnk); tr.appendChild(tdN);
 
-  // Region
-  var tdReg=document.createElement('td');
-  var regN=(p.pse__Region__r&&p.pse__Region__r.Name)?p.pse__Region__r.Name:'—';
-  var regS=document.createElement('span'); regS.textContent=regN;
-  if(regN==='—') regS.style.color='var(--muted)';
-  tdReg.appendChild(regS); tr.appendChild(tdReg);
-
-  // Project Manager
+  // 2. Project Manager (with DM colour dot — same person in this data model)
   var tdPM=document.createElement('td');
-  var pmN=(p.pse__Project_Manager__r&&p.pse__Project_Manager__r.Name)?p.pse__Project_Manager__r.Name:'—';
-  var pmS=document.createElement('span'); pmS.textContent=pmN;
-  if(pmN==='—') pmS.style.color='var(--muted)';
-  tdPM.appendChild(pmS); tr.appendChild(tdPM);
-
-  // Delivery Manager (full name, colour dot)
-  var tdDM=document.createElement('td');
   var chip=document.createElement('div'); chip.className='dm-chip';
   var dmInf=DM_MAP[p.pse__Project_Manager__c];
   var dot=document.createElement('span'); dot.className='dm-dot'; dot.style.background=dmInf?dmInf.color:'#8892aa';
-  var dmFull=(p.pse__Project_Manager__r&&p.pse__Project_Manager__r.Name)?p.pse__Project_Manager__r.Name:'—';
-  var dmTxt=document.createElement('span'); dmTxt.textContent=dmFull;
-  chip.appendChild(dot); chip.appendChild(dmTxt); tdDM.appendChild(chip); tr.appendChild(tdDM);
+  var pmN=(p.pse__Project_Manager__r&&p.pse__Project_Manager__r.Name)?p.pse__Project_Manager__r.Name:'—';
+  var pmTxt=document.createElement('span'); pmTxt.textContent=pmN;
+  if(pmN==='—') pmTxt.style.color='var(--muted)';
+  chip.appendChild(dot); chip.appendChild(pmTxt); tdPM.appendChild(chip); tr.appendChild(tdPM);
 
-  // Status
+  // 3. Region
+  var tdReg=document.createElement('td');
+  var regS=document.createElement('span');
+  var regN=(p.pse__Region__r&&p.pse__Region__r.Name)?p.pse__Region__r.Name:'—';
+  regS.textContent=regN; if(regN==='—') regS.style.color='var(--muted)';
+  tdReg.appendChild(regS); tr.appendChild(tdReg);
+
+  // 4. Status pill
   var tdS=document.createElement('td'); tdS.appendChild(makePill(p.pse__Project_Status__c)); tr.appendChild(tdS);
 
-  // Last Timecard Entry
-  var tdTC=document.createElement('td');
-  var tcS=document.createElement('span');
-  tcS.textContent=fmtDate(p.psa_tm_Last_Time_Entry_Date__c);
-  if(!p.psa_tm_Last_Time_Entry_Date__c) { tcS.style.color='#ef4444'; tcS.textContent='Never'; }
-  else {
-    var d=parseDate(p.psa_tm_Last_Time_Entry_Date__c);
-    if(d && daysDiff(TODAY,d)>30) tcS.style.color='#ef4444';
-    else tcS.style.color='var(--muted)';
-  }
-  tdTC.appendChild(tcS); tr.appendChild(tdTC);
+  // 5. Stage
+  var tdStg=document.createElement('td');
+  var stgS=document.createElement('span'); stgS.textContent=p.pse__Stage__c||'—';
+  if(!p.pse__Stage__c) stgS.style.color='var(--muted)';
+  tdStg.appendChild(stgS); tr.appendChild(tdStg);
 
-  // Sub-Type
-  var tdSt=document.createElement('td');
-  var stS=document.createElement('span'); stS.textContent=p.psa_pm_Project_Sub_Type__c||'—';
-  if(!p.psa_pm_Project_Sub_Type__c) stS.style.color='var(--muted)';
-  tdSt.appendChild(stS); tr.appendChild(tdSt);
+  // 6. End Date (red if past)
+  var tdED=document.createElement('td');
+  var edS=document.createElement('span'); edS.textContent=fmtDate(p.pse__End_Date__c);
+  if(p.pse__End_Date__c){
+    var edD=parseDate(p.pse__End_Date__c);
+    if(edD&&edD<TODAY) { edS.style.color='#ef4444'; edS.title='Past end date'; }
+    else edS.style.color='var(--muted)';
+  } else edS.style.color='var(--muted)';
+  tdED.appendChild(edS); tr.appendChild(tdED);
 
-  // Margin %
+  // 7. Billing Type
+  var tdBT=document.createElement('td');
+  var btS=document.createElement('span'); btS.textContent=p.pse__Billing_Type__c||'—';
+  if(!p.pse__Billing_Type__c) btS.style.color='var(--muted)';
+  tdBT.appendChild(btS); tr.appendChild(tdBT);
+
+  // 8. Margin % (PSA_PM_Margin_Percent__c — actual margin)
   var tdM=document.createElement('td');
   var mS=document.createElement('span');
-  var mVal=p.psa_pm_PercentComplete__c;
+  var mVal=p.PSA_PM_Margin_Percent__c;
   if(mVal!=null){
-    mS.textContent=mVal+'%';
-    mS.style.color = mVal<50?'#ef4444':mVal<75?'#f59e0b':'#22c55e';
+    mS.textContent=Number(mVal).toFixed(1)+'%';
+    mS.style.color=mVal<50?'#ef4444':mVal<75?'#f59e0b':'#22c55e';
     mS.style.fontWeight='600';
   } else { mS.textContent='—'; mS.style.color='var(--muted)'; }
   tdM.appendChild(mS); tr.appendChild(tdM);
 
+  // 9. Planned Hours
+  var tdPH=document.createElement('td');
+  var phS=document.createElement('span');
+  var phV=p.pse__Planned_Hours__c;
+  if(phV!=null&&phV>0){ phS.textContent=fmtNum(phV); phS.style.color='var(--muted)'; }
+  else { phS.textContent='—'; phS.style.color='#ef4444'; }
+  tdPH.appendChild(phS); tr.appendChild(tdPH);
+
+  // 10. Last Timecard Entry
+  var tdTC=document.createElement('td');
+  var tcS=document.createElement('span');
+  if(!p.psa_tm_Last_Time_Entry_Date__c){ tcS.style.color='#ef4444'; tcS.textContent='Never'; }
+  else {
+    tcS.textContent=fmtDate(p.psa_tm_Last_Time_Entry_Date__c);
+    var tcD=parseDate(p.psa_tm_Last_Time_Entry_Date__c);
+    tcS.style.color=(tcD&&daysDiff(TODAY,tcD)>30)?'#ef4444':'var(--muted)';
+  }
+  tdTC.appendChild(tcS); tr.appendChild(tdTC);
+
+  // 11. Last CSAT
+  var tdCS=document.createElement('td');
+  var csS=document.createElement('span'); csS.textContent=fmtDate(p.pse_pm_Last_Customer_Survey_Created__c);
+  csS.style.color=p.pse_pm_Last_Customer_Survey_Created__c?'var(--muted)':'var(--muted)';
+  if(!p.pse_pm_Last_Customer_Survey_Created__c){ csS.textContent='—'; csS.style.color='var(--muted)'; }
+  tdCS.appendChild(csS); tr.appendChild(tdCS);
+
+  // 12. Adoption Not Required reason
+  var tdAR=document.createElement('td');
+  var arS=document.createElement('span');
+  var arV=p.PSA_Adoption_Event_Not_Required_Reason__c;
+  arS.textContent=arV||'—'; arS.style.color=arV?'var(--text)':'var(--muted)';
+  if(arV){ arS.title=arV; if(arV.length>25) arS.textContent=arV.slice(0,23)+'…'; }
+  tdAR.appendChild(arS); tr.appendChild(tdAR);
+
+  // 13. Practice
+  var tdPrac=document.createElement('td');
+  var pracS=document.createElement('span');
+  var pracN=(p.pse__Practice__r&&p.pse__Practice__r.Name)?p.pse__Practice__r.Name:'—';
+  pracS.textContent=pracN; if(pracN==='—') pracS.style.color='var(--muted)';
+  tdPrac.appendChild(pracS); tr.appendChild(tdPrac);
+
   return tr;
 }
+function buildMainRow(p) { return buildDetailRow(p); }
 
 /* ── GENERIC TABLE HEADER BUILDER ── */
 function buildTableHeader(trEl, columns, sortCol, sortDir, onSort) {
