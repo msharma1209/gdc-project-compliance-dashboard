@@ -963,15 +963,24 @@ function showMainView() {
 ══════════════════════════════════════════════════ */
 function renderDMFilterBar() {
   var sel=document.getElementById('dm-select');
-  // populate options once (skip if already populated)
-  if(sel.options.length<=1){
-    DELIVERY_MANAGERS.forEach(function(dm){
-      var opt=document.createElement('option');
-      opt.value=dm.id; opt.textContent=dm.name;
-      sel.appendChild(opt);
-    });
-  }
-  sel.value=state.activeDM;
+  // Build set of DM IDs that have at least one project (ignoring active DM filter)
+  var base=state.allProjects.filter(function(p){ return !isInternal(p) && hasRecentTimecard(p); });
+  var activeDMIds={};
+  base.forEach(function(p){ if(p._dmId) activeDMIds[p._dmId]=true; });
+
+  // Rebuild options each time so it stays live
+  // Keep current value if it still has projects, else reset to 'all'
+  var prevVal=sel.value;
+  while(sel.options.length>1) sel.remove(1); // remove all except 'All DMs'
+  DELIVERY_MANAGERS.forEach(function(dm){
+    if(!activeDMIds[dm.id]) return; // skip DMs with no projects
+    var opt=document.createElement('option');
+    opt.value=dm.id; opt.textContent=dm.name;
+    sel.appendChild(opt);
+  });
+  // restore selection if still valid, else fall back to 'all'
+  sel.value=(prevVal==='all'||activeDMIds[prevVal])?prevVal:'all';
+  if(sel.value!==state.activeDM){ state.activeDM=sel.value; }
   updateDMDot();
 }
 function updateDMDot(){
@@ -1144,14 +1153,15 @@ function renderHealthChart(){
 }
 function renderDMChart(){
   var counts={};
-  DELIVERY_MANAGERS.forEach(function(dm){ counts[dm.name]=0; });
   state.filtered.forEach(function(p){
     var dm=DELIVERY_MANAGERS.find(function(d){ return d.id===p._dmId; });
     if(dm) counts[dm.name]=(counts[dm.name]||0)+1;
   });
-  var labels=DELIVERY_MANAGERS.map(function(d){ return d.name; });
-  var data=labels.map(function(n){ return counts[n]||0; });
-  var colors=DELIVERY_MANAGERS.map(function(d){ return d.color; });
+  // Only show DMs with at least 1 project
+  var activeDMs=DELIVERY_MANAGERS.filter(function(d){ return counts[d.name]>0; });
+  var labels=activeDMs.map(function(d){ return d.name; });
+  var data=activeDMs.map(function(d){ return counts[d.name]; });
+  var colors=activeDMs.map(function(d){ return d.color; });
   if(state.charts.dm){
     state.charts.dm.data.datasets[0].data=data;
     state.charts.dm.update('none'); return;
@@ -1160,7 +1170,9 @@ function renderDMChart(){
   state.charts.dm=new Chart(ctx,{type:'bar',data:{labels:labels,datasets:[{data:data,backgroundColor:colors.map(function(c){ return c+'bb'; }),borderRadius:6,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,scales:{x:{ticks:{color:'#475569',font:{size:11}},grid:{display:false},border:{display:false}},y:{ticks:{color:'#475569',font:{size:11},stepSize:1},grid:{display:false},border:{display:false}}},plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return '  '+c.raw+' projects';}}}}
   ,onClick:function(evt,elements){
     if(!elements||!elements.length) return;
-    var dm=DELIVERY_MANAGERS[elements[0].index];
+    var lbl=state.charts.dm.data.labels[elements[0].index];
+    var dm=DELIVERY_MANAGERS.find(function(d){ return d.name===lbl; });
+    if(!dm) return;
     showDetailView({
       id:'dm_'+dm.id, label:dm.name, icon:'👤',
       desc:'Projects for '+dm.name,
