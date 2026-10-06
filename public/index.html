@@ -596,6 +596,7 @@ var SHARED_COLUMNS = [
   {key:'planned_hrs',  label:'Planned Hours',       sortable:true },
   {key:'timecard',     label:'Last Timecard',       sortable:true },
   {key:'csat',         label:'Last CSAT Sent On',   sortable:true },
+  {key:'ae_forecast',  label:'Forecasted AE Date',  sortable:true },
   {key:'adoption_exc', label:'Adoption Not Req.',   sortable:true },
   {key:'last_report',  label:'Last Status Report',  sortable:true }
 ];
@@ -616,6 +617,7 @@ function getSortVal(p, col) {
     case 'planned_hrs':  return p.pse__Planned_Hours__c!=null?p.pse__Planned_Hours__c:-1;
     case 'timecard':     return p.psa_tm_Last_Time_Entry_Date__c||'';
     case 'csat':         return p._lastCSAT||'';
+    case 'ae_forecast':  return p._forecastedAEDate||'';
     case 'adoption_exc': return p.PSA_Adoption_Event_Not_Required_Reason__c||'';
     case 'practice':     return ((p.pse__Practice__r&&p.pse__Practice__r.Name)||'').toLowerCase();
     case 'last_report':  return p._lastStatusReport||'';
@@ -734,7 +736,19 @@ function buildDetailRow(p) {
   }
   tdCS.appendChild(csS); tr.appendChild(tdCS);
 
-  // 12. Adoption Not Required reason
+  // 12. Forecasted AE Date
+  var tdAE=document.createElement('td');
+  var aeS=document.createElement('span');
+  if(!p._forecastedAEDate){
+    aeS.textContent='—'; aeS.style.color='var(--muted)';
+  } else {
+    aeS.textContent=fmtDate(p._forecastedAEDate);
+    var aeD=parseDate(p._forecastedAEDate);
+    aeS.style.color=(aeD&&aeD<TODAY)?'#dc2626':'var(--muted)';
+  }
+  tdAE.appendChild(aeS); tr.appendChild(tdAE);
+
+  // 13. Adoption Not Required reason
   var tdAR=document.createElement('td');
   var arS=document.createElement('span');
   var arV=p.PSA_Adoption_Event_Not_Required_Reason__c;
@@ -1028,6 +1042,23 @@ function normaliseProjects(records) {
     p._lastCSAT = (csRecs && csRecs.length > 0)
       ? csRecs[0].psa_pm_Survey_Sent_Date__c  // already ordered DESC LIMIT 1 by sent date
       : null;
+
+    // Forecasted AE date — earliest date from Forecast/Forecasted adoption events
+    var aeRecs = p.Adoption_Events__r && p.Adoption_Events__r.records;
+    p._forecastedAEDate = null;
+    if (aeRecs) {
+      var fDates = [];
+      aeRecs.forEach(function(e) {
+        var st = (e.PSA_PM_Adoption_Event_Status__c || '').toLowerCase();
+        if ((st === 'forecast' || st === 'forecasted') && e.PSA_PM_Adoption_Event_Date__c) {
+          fDates.push(e.PSA_PM_Adoption_Event_Date__c);
+        }
+      });
+      if (fDates.length > 0) {
+        fDates.sort();  // ISO dates sort lexicographically
+        p._forecastedAEDate = fDates[0];  // earliest forecasted AE date
+      }
+    }
 
     // Determine which DM owns this project — either as Project Manager or as
     // an assigned resource with Role = 'Delivery Manager'
