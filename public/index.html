@@ -102,9 +102,20 @@
   .kpi-breakdown-count { font-size: 0.85rem; font-weight: 700; color: var(--heading); min-width: 20px; text-align: right; }
   .kpi-breakdown-bar { height: 4px; border-radius: 2px; margin-top: 1px; transition: width 0.3s; }
 
-  /* ── Charts Row ── */
-  #charts-row { display: grid; grid-template-columns: 1fr 2fr 2fr; gap: 18px; }
-  .chart-card { background: rgba(255,255,255,0.82); backdrop-filter: blur(8px); border: none; border-radius: 20px; box-shadow: 0 4px 24px rgba(30,80,160,0.08), 0 1px 4px rgba(30,80,160,0.04); padding: 22px 20px; }
+  /* ── Charts Container (outer panel) ── */
+  #charts-container {
+    background: rgba(255,255,255,0.6); backdrop-filter: blur(12px);
+    border-radius: 24px; padding: 20px;
+    box-shadow: 0 6px 32px rgba(30,80,160,0.1), 0 1px 4px rgba(30,80,160,0.06);
+    border: 1px solid rgba(200,220,255,0.5);
+  }
+  /* ── Charts Row (inner cards) ── */
+  #charts-row { display: grid; grid-template-columns: 1fr 2fr 2fr; gap: 14px; }
+  .chart-card {
+    background: rgba(255,255,255,0.9); border: none; border-radius: 16px;
+    box-shadow: 0 2px 12px rgba(30,80,160,0.07);
+    padding: 18px 16px;
+  }
   .chart-title { font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; display: flex; align-items: center; gap: 6px; }
   .chart-title-icon { font-size: 0.95rem; line-height: 1; }
   .chart-wrap { position: relative; width: 100%; }
@@ -184,8 +195,8 @@
   #detail-kpi-badge small { display: block; font-size: 0.65rem; color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
 
   /* Responsive */
-  @media (max-width: 1100px) { #charts-row { grid-template-columns: 1fr 1fr; } #charts-row .chart-card:first-child { grid-column: span 2; } #chart-doughnut-wrap { height: 160px; } }
-  @media (max-width: 700px) { #charts-row { grid-template-columns: 1fr; } #charts-row .chart-card:first-child { grid-column: span 1; } #main, #detail-view { padding: 14px 12px; } #app-header, #dm-filter-bar { padding-left: 12px; padding-right: 12px; } #detail-banner { flex-wrap: wrap; } }
+  @media (max-width: 1100px) { #charts-row { grid-template-columns: 1fr 1fr; } #charts-row .chart-card:first-child { grid-column: span 2; } #chart-doughnut-wrap { height: 160px; } #charts-container { padding: 14px; } }
+  @media (max-width: 700px) { #charts-row { grid-template-columns: 1fr; } #charts-row .chart-card:first-child { grid-column: span 1; } #main, #detail-view { padding: 14px 12px; } #app-header, #dm-filter-bar { padding-left: 12px; padding-right: 12px; } #detail-banner { flex-wrap: wrap; } #charts-container { padding: 10px; } }
 </style>
 </head>
 <body>
@@ -244,26 +255,28 @@
 <!-- ═══ MAIN VIEW ═══ -->
 <div id="main-view">
   <div id="main">
+    <section id="charts-section">
+      <div class="section-header">📈 Analytics</div>
+      <div id="charts-container">
+        <div id="charts-row">
+          <div class="chart-card">
+            <div class="chart-title"><span class="chart-title-icon">❤️‍🔥</span> Engagement Health</div>
+            <div class="chart-wrap" id="chart-doughnut-wrap"><canvas id="chart-doughnut"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title"><span class="chart-title-icon">🗂️</span> Project Categorization — By Practice</div>
+            <div class="chart-wrap" id="chart-practice-wrap"><canvas id="chart-practice"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title"><span class="chart-title-icon">💳</span> Project Categorization — By Billing Type</div>
+            <div class="chart-wrap" id="chart-billing-wrap"><canvas id="chart-billing"></canvas></div>
+          </div>
+        </div>
+      </div>
+    </section>
     <section id="kpi-section">
       <div class="section-header">📊 Key Performance Indicators — click any tile to view matching projects</div>
       <div id="kpi-grid"></div>
-    </section>
-    <section id="charts-section">
-      <div class="section-header">📈 Analytics</div>
-      <div id="charts-row">
-        <div class="chart-card">
-          <div class="chart-title"><span class="chart-title-icon">❤️‍🔥</span> Engagement Health</div>
-          <div class="chart-wrap" id="chart-doughnut-wrap"><canvas id="chart-doughnut"></canvas></div>
-        </div>
-        <div class="chart-card">
-          <div class="chart-title"><span class="chart-title-icon">🗂️</span> Project Categorization — By Practice</div>
-          <div class="chart-wrap" id="chart-practice-wrap"><canvas id="chart-practice"></canvas></div>
-        </div>
-        <div class="chart-card">
-          <div class="chart-title"><span class="chart-title-icon">💳</span> Project Categorization — By Billing Type</div>
-          <div class="chart-wrap" id="chart-billing-wrap"><canvas id="chart-billing"></canvas></div>
-        </div>
-      </div>
     </section>
     <section id="table-section">
       <div class="section-header">📋 All Projects</div>
