@@ -22,7 +22,7 @@
     --radius:   14px;
   }
   html { font-size: 14px; }
-  body { background: linear-gradient(135deg, #f0f4ff 0%, #e8f0fe 100%); color: var(--text); font-family: 'Salesforce Sans', Inter, system-ui, -apple-system, sans-serif; min-height: 100vh; line-height: 1.5; }
+  body { background: linear-gradient(160deg, #ddeeff 0%, #eef5ff 40%, #f7faff 100%); color: var(--text); font-family: 'Salesforce Sans', Inter, system-ui, -apple-system, sans-serif; min-height: 100vh; line-height: 1.5; }
   a { color: var(--blue); text-decoration: none; }
   a:hover { text-decoration: underline; }
 
@@ -32,8 +32,9 @@
   /* ── Header ── */
   #app-header {
     position: sticky; top: 0; z-index: 100;
-    background: #ffffff; border-bottom: 1px solid var(--border);
-    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    background: rgba(255,255,255,0.88); backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(200,215,240,0.5);
+    box-shadow: 0 2px 16px rgba(30,80,160,0.07);
     padding: 0 24px; display: flex; align-items: center; gap: 16px;
     flex-wrap: wrap; min-height: 56px;
   }
@@ -49,7 +50,7 @@
   .badge-bundled { background: #fef9c3; color: #a16207;       border: 1px solid rgba(217,119,6,0.3); }
 
   /* ── DM Filter Bar ── */
-  #dm-filter-bar { display: flex; gap: 8px; padding: 12px 24px; background: #ffffff; border-bottom: 1px solid var(--border); flex-wrap: wrap; align-items: center; }
+  #dm-filter-bar { display: flex; gap: 8px; padding: 12px 24px; background: rgba(255,255,255,0.7); backdrop-filter: blur(8px); border-bottom: 1px solid rgba(200,215,240,0.4); flex-wrap: wrap; align-items: center; }
   .dm-filter-btn { display: flex; align-items: center; gap: 6px; padding: 6px 16px; border-radius: 24px; border: 1px solid var(--border); background: #ffffff; color: var(--muted); font-size: 0.8rem; cursor: pointer; transition: all 0.15s; font-weight: 500; font-family: inherit; }
   .dm-filter-btn:hover { border-color: var(--blue); color: var(--blue); background: rgba(1,118,211,0.04); }
   .dm-filter-btn.active { color: var(--blue); background: rgba(1,118,211,0.08); border-color: var(--blue); }
@@ -63,9 +64,9 @@
   /* ── KPI Grid ── */
   #kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; }
   .kpi-card {
-    background: #ffffff; border: 1px solid var(--border); border-radius: var(--radius);
-    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-    padding: 18px 16px; cursor: pointer; transition: transform 0.12s, box-shadow 0.15s, border-color 0.15s;
+    background: rgba(255,255,255,0.82); backdrop-filter: blur(8px); border: none; border-radius: 18px;
+    box-shadow: 0 4px 20px rgba(30,80,160,0.08), 0 1px 4px rgba(30,80,160,0.04);
+    padding: 18px 16px; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s;
     position: relative; overflow: hidden;
   }
   .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; border-radius: var(--radius) var(--radius) 0 0; }
@@ -73,9 +74,9 @@
   .kpi-card.border-red::before    { background: #dc2626; }
   .kpi-card.border-yellow::before { background: #d97706; }
   .kpi-card.border-blue::before   { background: #0176d3; }
-  .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(1,118,211,0.12); border-color: var(--blue); }
+  .kpi-card:hover { transform: translateY(-3px); box-shadow: 0 10px 32px rgba(1,118,211,0.14); }
   .kpi-card.placeholder-card { cursor: default; opacity: 0.6; }
-  .kpi-card.placeholder-card:hover { transform: none; box-shadow: 0 2px 12px rgba(0,0,0,0.06); border-color: var(--border); }
+  .kpi-card.placeholder-card:hover { transform: none; box-shadow: 0 4px 20px rgba(30,80,160,0.08); }
   .kpi-icon  { font-size: 1.4rem; margin-bottom: 8px; display: block; line-height: 1; }
   .kpi-label { font-size: 0.7rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; line-height: 1.3; }
   .kpi-value { font-size: 2rem; font-weight: 700; line-height: 1; color: var(--heading); }
@@ -89,13 +90,13 @@
   .kpi-breakdown-bar { height: 4px; border-radius: 2px; margin-top: 1px; transition: width 0.3s; }
 
   /* ── Charts Row ── */
-  #charts-row { display: grid; grid-template-columns: 1fr 2fr 2fr; gap: 16px; }
-  .chart-card { background: #ffffff; border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 2px 12px rgba(0,0,0,0.06); padding: 20px 18px; }
-  .chart-title { font-size: 0.75rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 14px; }
+  #charts-row { display: grid; grid-template-columns: 1fr 2fr 2fr; gap: 18px; }
+  .chart-card { background: rgba(255,255,255,0.82); backdrop-filter: blur(8px); border: none; border-radius: 20px; box-shadow: 0 4px 24px rgba(30,80,160,0.08), 0 1px 4px rgba(30,80,160,0.04); padding: 22px 20px; }
+  .chart-title { font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; }
   .chart-wrap { position: relative; width: 100%; }
-  #chart-doughnut-wrap { height: 200px; display: flex; align-items: center; justify-content: center; }
-  #chart-practice-wrap { height: 220px; }
-  #chart-billing-wrap  { height: 220px; }
+  #chart-doughnut-wrap { height: 210px; display: flex; align-items: center; justify-content: center; }
+  #chart-practice-wrap { height: 230px; }
+  #chart-billing-wrap  { height: 230px; }
 
   /* ── Table shared styles ── */
   #table-controls, #detail-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
@@ -108,16 +109,16 @@
   }
   #search-box:focus, #detail-search-box:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(1,118,211,0.1); }
   #row-count, #detail-row-count { font-size: 0.78rem; color: var(--muted); margin-left: auto; }
-  .table-wrap { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.04); background: #ffffff; }
+  .table-wrap { overflow-x: auto; border-radius: 18px; border: none; box-shadow: 0 4px 24px rgba(30,80,160,0.08), 0 1px 4px rgba(30,80,160,0.04); background: rgba(255,255,255,0.86); backdrop-filter: blur(8px); }
   table { width: 100%; border-collapse: collapse; min-width: 1500px; }
-  thead tr { background: #f8faff; border-bottom: 1px solid var(--border); }
+  thead tr { background: rgba(240,246,255,0.9); border-bottom: 1px solid rgba(200,215,240,0.5); }
   th { padding: 11px 12px; text-align: left; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); white-space: nowrap; cursor: pointer; user-select: none; transition: color 0.15s; }
   th:hover { color: var(--heading); }
   th .sort-icon { margin-left: 4px; opacity: 0.4; font-style: normal; font-size: 0.7rem; }
   th.sort-asc .sort-icon, th.sort-desc .sort-icon { opacity: 1; color: var(--blue); }
-  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
+  tbody tr { border-bottom: 1px solid rgba(200,215,240,0.35); transition: background 0.1s; }
   tbody tr:last-child { border-bottom: none; }
-  tbody tr:hover { background: rgba(1,118,211,0.04); }
+  tbody tr:hover { background: rgba(1,118,211,0.035); }
   td { padding: 10px 12px; font-size: 0.8rem; vertical-align: middle; color: var(--text); }
   tr.row-alert-red    { border-left: 3px solid rgba(220,38,38,0.7); }
   tr.row-alert-yellow { border-left: 3px solid rgba(217,119,6,0.6); }
@@ -267,10 +268,13 @@ var TODAY        = new Date();
 var SF_INSTANCE  = 'https://infa.my.salesforce.com';
 
 var PRAC_COLORS = {
-  'Consulting Services':'#3b82f6','Managed Services':'#22c55e',
-  'Fixed Price':'#8b5cf6','Time and Materials':'#f59e0b',
-  'Service units':'#06b6d4','Non-Billable':'#6b7280',
-  'Unassigned':'#ef4444'
+  'Consulting Services':'rgba(96,165,250,0.75)',
+  'Managed Services'   :'rgba(52,211,153,0.75)',
+  'Fixed Price'        :'rgba(167,139,250,0.75)',
+  'Time and Materials' :'rgba(251,191,36,0.75)',
+  'Service units'      :'rgba(34,211,238,0.75)',
+  'Non-Billable'       :'rgba(148,163,184,0.6)',
+  'Unassigned'         :'rgba(252,165,165,0.7)'
 };
 
 var DELIVERY_MANAGERS = [
@@ -947,7 +951,7 @@ function renderDoughnutChart(){
   var data=[counts.Green,counts.Yellow,counts.Red,counts['Not Set']];
   if(state.charts.doughnut){ state.charts.doughnut.data.datasets[0].data=data; state.charts.doughnut.update('none'); return; }
   var ctx=document.getElementById('chart-doughnut').getContext('2d');
-  state.charts.doughnut=new Chart(ctx,{type:'doughnut',data:{labels:['Green','Yellow','Red','Not Set'],datasets:[{data:data,backgroundColor:['#22c55e','#f59e0b','#ef4444','#4b5563'],borderWidth:2,borderColor:'#1a1d27',hoverBorderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{position:'bottom',labels:{color:'#8892aa',font:{size:11},padding:8,boxWidth:10}},tooltip:{callbacks:{label:function(c){return ' '+c.label+': '+c.raw;}}}}}});
+  state.charts.doughnut=new Chart(ctx,{type:'doughnut',data:{labels:['Green','Yellow','Red','Not Set'],datasets:[{data:data,backgroundColor:['rgba(34,197,94,0.7)','rgba(251,191,36,0.7)','rgba(248,113,113,0.7)','rgba(148,163,184,0.5)'],borderWidth:0,hoverOffset:6}]},options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{position:'bottom',labels:{color:'#64748b',font:{size:11},padding:10,boxWidth:10,borderRadius:4,usePointStyle:true,pointStyle:'circle'}},tooltip:{callbacks:{label:function(c){return '  '+c.label+': '+c.raw;}}}}}});
 }
 function renderPracticeChart(){
   var counts={};
@@ -966,8 +970,8 @@ function renderPracticeChart(){
     state.charts.practice.update('none'); return;
   }
   var ctx=document.getElementById('chart-practice').getContext('2d');
-  state.charts.practice=new Chart(ctx,{type:'bar',data:{labels:labels,datasets:[{data:data,backgroundColor:colors,borderRadius:4}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,scales:{x:{ticks:{color:'#8892aa',font:{size:11},stepSize:1},grid:{color:'rgba(46,49,80,0.4)'}},y:{ticks:{color:'#555',font:{size:11}},grid:{display:false}}},plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return ' '+c.raw+' projects';}}}}
-  }});
+  state.charts.practice=new Chart(ctx,{type:'bar',data:{labels:labels,datasets:[{data:data,backgroundColor:colors,borderRadius:6,borderSkipped:false}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,scales:{x:{display:false,grid:{display:false},border:{display:false},ticks:{display:false}},y:{ticks:{color:'#475569',font:{size:11},padding:4},grid:{display:false},border:{display:false}}},plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return '  '+c.raw+' projects';}}},datalabels:{display:false}}}
+  });
 }
 function renderBillingChart(){
   var counts={};
@@ -978,7 +982,7 @@ function renderBillingChart(){
   });
   var sorted=Object.keys(counts).sort(function(a,b){return counts[b]-counts[a];});
   var labels=sorted; var data=sorted.map(function(k){return counts[k];});
-  var palette=['rgba(1,118,211,0.75)','rgba(86,174,238,0.75)','rgba(34,197,94,0.75)','rgba(245,158,11,0.75)','rgba(139,92,246,0.75)','rgba(239,68,68,0.75)','rgba(16,185,129,0.75)','rgba(251,146,60,0.75)'];
+  var palette=['rgba(96,165,250,0.75)','rgba(167,139,250,0.75)','rgba(52,211,153,0.75)','rgba(251,191,36,0.75)','rgba(34,211,238,0.75)','rgba(252,165,165,0.7)','rgba(134,239,172,0.75)','rgba(253,186,116,0.75)'];
   var colors=sorted.map(function(_,i){return palette[i%palette.length];});
   if(state.charts.billing){
     state.charts.billing.data.labels=labels;
@@ -987,7 +991,7 @@ function renderBillingChart(){
     state.charts.billing.update('none'); return;
   }
   var ctx=document.getElementById('chart-billing').getContext('2d');
-  state.charts.billing=new Chart(ctx,{type:'bar',data:{labels:labels,datasets:[{data:data,backgroundColor:colors,borderRadius:4}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,scales:{x:{ticks:{color:'#8892aa',font:{size:11},stepSize:1},grid:{color:'rgba(46,49,80,0.4)'}},y:{ticks:{color:'#555',font:{size:11}},grid:{display:false}}},plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return ' '+c.raw+' projects';}}}}
+  state.charts.billing=new Chart(ctx,{type:'bar',data:{labels:labels,datasets:[{data:data,backgroundColor:colors,borderRadius:6,borderSkipped:false}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,scales:{x:{display:false,grid:{display:false},border:{display:false},ticks:{display:false}},y:{ticks:{color:'#475569',font:{size:11},padding:4},grid:{display:false},border:{display:false}}},plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return '  '+c.raw+' projects';}}}}
   }});
 }
 
