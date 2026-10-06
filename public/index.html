@@ -1203,7 +1203,7 @@ function renderMainTableBody(){
 /* ── REFRESH MAIN ── */
 function refreshMain(){
   applyDMFilter(); applySearchFilter(); applySort(state.displayed, state.sortCol, state.sortDir);
-  updateDMDot();
+  renderDMFilterBar(); // rebuild dropdown with only DMs who have active projects
   renderKPIs(); renderDoughnutChart(); renderPracticeChart(); renderBillingChart(); renderHealthChart(); renderDMChart();
   renderMainTableHeader(); renderMainTableBody();
 }
