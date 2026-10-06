@@ -576,6 +576,7 @@ var SHARED_COLUMNS = [
   {key:'name',         label:'Project Name',        sortable:true },
   {key:'pm',           label:'Project Manager',     sortable:true },
   {key:'region',       label:'Region',              sortable:true },
+  {key:'practice',     label:'Practice',            sortable:true },
   {key:'status',       label:'Status',              sortable:true },
   {key:'stage',        label:'Stage',               sortable:true },
   {key:'enddate',      label:'End Date',            sortable:true },
@@ -585,7 +586,6 @@ var SHARED_COLUMNS = [
   {key:'timecard',     label:'Last Timecard',       sortable:true },
   {key:'csat',         label:'Last CSAT Sent On',   sortable:true },
   {key:'adoption_exc', label:'Adoption Not Req.',   sortable:true },
-  {key:'practice',     label:'Practice',            sortable:true },
   {key:'last_report',  label:'Last Status Report',  sortable:true }
 ];
 var MAIN_COLUMNS   = SHARED_COLUMNS;
@@ -649,7 +649,14 @@ function buildDetailRow(p) {
   regS.textContent=regN; if(regN==='—') regS.style.color='var(--muted)';
   tdReg.appendChild(regS); tr.appendChild(tdReg);
 
-  // 4. Status pill
+  // 4. Practice (moved before Status)
+  var tdPrac=document.createElement('td');
+  var pracS=document.createElement('span');
+  var pracN=(p.pse__Practice__r&&p.pse__Practice__r.Name)?p.pse__Practice__r.Name:'—';
+  pracS.textContent=pracN; if(pracN==='—') pracS.style.color='var(--muted)';
+  tdPrac.appendChild(pracS); tr.appendChild(tdPrac);
+
+  // 5. Status pill
   var tdS=document.createElement('td'); tdS.appendChild(makePill(p.pse__Project_Status__c)); tr.appendChild(tdS);
 
   // 5. Stage
@@ -724,14 +731,7 @@ function buildDetailRow(p) {
   if(arV){ arS.title=arV; if(arV.length>25) arS.textContent=arV.slice(0,23)+'…'; }
   tdAR.appendChild(arS); tr.appendChild(tdAR);
 
-  // 13. Practice
-  var tdPrac=document.createElement('td');
-  var pracS=document.createElement('span');
-  var pracN=(p.pse__Practice__r&&p.pse__Practice__r.Name)?p.pse__Practice__r.Name:'—';
-  pracS.textContent=pracN; if(pracN==='—') pracS.style.color='var(--muted)';
-  tdPrac.appendChild(pracS); tr.appendChild(tdPrac);
-
-  // 14. Last Status Report (derived from Status_Reports__r sub-query MAX)
+  // 13. Last Status Report (derived from Status_Reports__r sub-query MAX)
   var tdLR=document.createElement('td');
   var lrS=document.createElement('span');
   var lrV=p._lastStatusReport;
