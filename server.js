@@ -69,7 +69,8 @@ function soapLogin(callback) {
     '</soapenv:Envelope>',
   ].join('\n');
 
-  var loginHost = 'login.salesforce.com';
+  // Use the org's own domain — required for SSO-enforced orgs (e.g. infa.my.salesforce.com)
+  var loginHost = url.parse(SF_INSTANCE).hostname || 'login.salesforce.com';
   var loginPath = '/services/Soap/u/59.0';
   var options = {
     hostname: loginHost,
