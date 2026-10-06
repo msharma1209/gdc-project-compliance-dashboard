@@ -79,7 +79,7 @@ var SOQL_SELECT = [
   'FROM pse__Proj__c',
 ].join(' ');
 
-var SOQL_SUFFIX = "AND pse__Stage__c = 'In Progress' ORDER BY pse__Project_Manager__r.Name, LastModifiedDate DESC LIMIT 200";
+var SOQL_SUFFIX = "AND pse__Stage__c NOT IN ('Completed','Cancelled','Canceled','On Hold','Closed','Delivery Complete') ORDER BY pse__Project_Manager__r.Name, LastModifiedDate DESC LIMIT 200";
 var DM_IN       = "(" + DM_IDS.map(function (id) { return "'" + id + "'"; }).join(',') + ")";
 
 // Query 1: projects where DM is Project Manager

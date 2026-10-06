@@ -379,7 +379,7 @@ function hasCSATThisYear(p) {
 // Helper: is this an internal/non-billable project?
 function isInternal(p) {
   // Exclude by stage
-  var badStages = ['completed','cancelled','canceled','on hold','closed'];
+  var badStages = ['completed','cancelled','canceled','on hold','closed','delivery complete'];
   if (badStages.indexOf((p.pse__Stage__c || '').toLowerCase()) !== -1) return true;
   // Exclude by practice name
   var practice = (p.pse__Practice__r && p.pse__Practice__r.Name) ? p.pse__Practice__r.Name.toLowerCase() : '';
