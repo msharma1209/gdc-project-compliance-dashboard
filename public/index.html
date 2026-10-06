@@ -578,7 +578,8 @@ var SHARED_COLUMNS = [
   {key:'timecard',     label:'Last Timecard',       sortable:true },
   {key:'csat',         label:'Last CSAT',           sortable:true },
   {key:'adoption_exc', label:'Adoption Not Req.',   sortable:true },
-  {key:'practice',     label:'Practice',            sortable:true }
+  {key:'practice',     label:'Practice',            sortable:true },
+  {key:'last_report',  label:'Last Status Report',  sortable:true }
 ];
 var MAIN_COLUMNS   = SHARED_COLUMNS;
 var DETAIL_COLUMNS = SHARED_COLUMNS;
@@ -599,6 +600,7 @@ function getSortVal(p, col) {
     case 'csat':         return p.pse_pm_Last_Customer_Survey_Created__c||'';
     case 'adoption_exc': return p.PSA_Adoption_Event_Not_Required_Reason__c||'';
     case 'practice':     return ((p.pse__Practice__r&&p.pse__Practice__r.Name)||'').toLowerCase();
+    case 'last_report':  return p.PSA_PM_Last_Project_Status_Report_Week__c||'';
     // legacy sort keys (used by charts/filter)
     case 'account':      return ((p.pse__Account__r&&p.pse__Account__r.Name)||'').toLowerCase();
     case 'dm':           return ((p.pse__Project_Manager__r&&p.pse__Project_Manager__r.Name)||'').toLowerCase();
@@ -716,6 +718,19 @@ function buildDetailRow(p) {
   var pracN=(p.pse__Practice__r&&p.pse__Practice__r.Name)?p.pse__Practice__r.Name:'—';
   pracS.textContent=pracN; if(pracN==='—') pracS.style.color='var(--muted)';
   tdPrac.appendChild(pracS); tr.appendChild(tdPrac);
+
+  // 14. Last Status Report
+  var tdLR=document.createElement('td');
+  var lrS=document.createElement('span');
+  var lrV=p.PSA_PM_Last_Project_Status_Report_Week__c;
+  if(!lrV){
+    lrS.textContent='Never'; lrS.style.color='#ef4444';
+  } else {
+    lrS.textContent=fmtDate(lrV);
+    var lrD=parseDate(lrV);
+    lrS.style.color=(lrD&&daysDiff(TODAY,lrD)>14)?'#ef4444':'var(--muted)';
+  }
+  tdLR.appendChild(lrS); tr.appendChild(tdLR);
 
   return tr;
 }
