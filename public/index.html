@@ -1043,20 +1043,22 @@ function normaliseProjects(records) {
       ? csRecs[0].psa_pm_Survey_Sent_Date__c  // already ordered DESC LIMIT 1 by sent date
       : null;
 
-    // Forecasted AE date — earliest date from Forecast/Forecasted adoption events
+    // Forecasted AE date — earliest Target Date (PSA_PM_Start_Date__c) from Forecast/Forecasted AEs
     var aeRecs = p.Adoption_Events__r && p.Adoption_Events__r.records;
     p._forecastedAEDate = null;
     if (aeRecs) {
       var fDates = [];
       aeRecs.forEach(function(e) {
         var st = (e.PSA_PM_Adoption_Event_Status__c || '').toLowerCase();
-        if ((st === 'forecast' || st === 'forecasted') && e.PSA_PM_Adoption_Event_Date__c) {
-          fDates.push(e.PSA_PM_Adoption_Event_Date__c);
+        if (st === 'forecast' || st === 'forecasted') {
+          // Use Target Date (PSA_PM_Start_Date__c); fall back to Actual Date if target is null
+          var d = e.PSA_PM_Start_Date__c || e.PSA_PM_Adoption_Event_Date__c;
+          if (d) fDates.push(d);
         }
       });
       if (fDates.length > 0) {
         fDates.sort();  // ISO dates sort lexicographically
-        p._forecastedAEDate = fDates[0];  // earliest forecasted AE date
+        p._forecastedAEDate = fDates[0];  // earliest forecasted AE target date
       }
     }
 
