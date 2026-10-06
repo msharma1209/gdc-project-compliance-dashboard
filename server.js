@@ -78,9 +78,9 @@ var SOQL = [
   // Assignments sub-query — to detect DMs assigned with Role = Delivery Manager
   '(SELECT Id, pse__Resource__c, pse__Role__c FROM pse__Assignments__r WHERE pse__Role__c = \'Delivery Manager\')',
   'FROM pse__Proj__c',
-  "WHERE (pse__Project_Manager__c IN (" + DM_IDS.map(function (id) { return "'" + id + "'"; }).join(',') + ")",
-  "OR Id IN (SELECT pse__Project__c FROM pse__Assignment__c WHERE pse__Resource__c IN (" + DM_IDS.map(function (id) { return "'" + id + "'"; }).join(',') + ") AND pse__Role__c = 'Delivery Manager'))",
-  "AND pse__Stage__c = 'In Progress'",
+  "WHERE pse__Stage__c = 'In Progress'",
+  "AND (pse__Project_Manager__c IN (" + DM_IDS.map(function (id) { return "'" + id + "'"; }).join(',') + ")",
+  "OR Id IN (SELECT pse__Project__c FROM pse__Assignment__c WHERE pse__Role__c = 'Delivery Manager' AND pse__Resource__c IN (" + DM_IDS.map(function (id) { return "'" + id + "'"; }).join(',') + ")))",
   'ORDER BY pse__Project_Manager__r.Name, LastModifiedDate DESC LIMIT 200',
 ].join(' ');
 
