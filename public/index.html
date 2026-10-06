@@ -317,21 +317,21 @@ function makePill(val) {
 /* ── KPI DEFINITIONS ── */
 // Helper: does the project have an adoption event in Forecast or Final state?
 function hasActiveForecastAdoption(p) {
-  var events = p.pse__Adoption_Events__r && p.pse__Adoption_Events__r.records;
+  var events = p.Adoption_Events__r && p.Adoption_Events__r.records;
   if (!events || events.length === 0) return false;
   return events.some(function(e) {
-    var s = (e.pse__Status__c || '').toLowerCase();
+    var s = (e.PSA_PM_Adoption_Event_Status__c || '').toLowerCase();
     return s === 'forecast' || s === 'final';
   });
 }
 // Helper: does the project have an adoption event in Forecast state due within 30 days?
 function hasUpcomingForecastAdoption(p) {
-  var events = p.pse__Adoption_Events__r && p.pse__Adoption_Events__r.records;
+  var events = p.Adoption_Events__r && p.Adoption_Events__r.records;
   if (!events || events.length === 0) return false;
   var in30 = new Date(TODAY.getTime() + 30*24*60*60*1000);
   return events.some(function(e) {
-    if ((e.pse__Status__c || '').toLowerCase() !== 'forecast') return false;
-    var d = parseDate(e.pse__Due_Date__c);
+    if ((e.PSA_PM_Adoption_Event_Status__c || '').toLowerCase() !== 'forecast') return false;
+    var d = parseDate(e.PSA_PM_Adoption_Event_Date__c);
     return d && d >= TODAY && d <= in30;
   });
 }
@@ -341,9 +341,18 @@ function hasBillableMilestoneDueSoon(p) {
   if (!ms || ms.length === 0) return false;
   var in30 = new Date(TODAY.getTime() + 30*24*60*60*1000);
   return ms.some(function(m) {
-    if (!m.pse__Billable__c) return false;
-    var d = parseDate(m.pse__Due_Date__c);
+    if (!m.pse__Include_In_Financials__c) return false;
+    var d = parseDate(m.pse__Target_Date__c);
     return d && d >= TODAY && d <= in30;
+  });
+}
+// Helper: does the project have a CSAT survey in the current calendar year?
+function hasCSATThisYear(p) {
+  var surveys = p.Customer_Surveys__r && p.Customer_Surveys__r.records;
+  if (!surveys || surveys.length === 0) return false;
+  return surveys.some(function(s) {
+    var d = parseDate(s.psa_pm_Survey_Response_Date__c);
+    return d && d.getUTCFullYear() === TODAY.getFullYear();
   });
 }
 // Helper: is this an internal/non-billable project?
@@ -412,16 +421,11 @@ var KPI_DEFS = [
     desc:'Billable projects with no adoption event in Forecast or Final state',
     match: function(p) { return !isInternal(p) && !hasActiveForecastAdoption(p); } },
   { id:'missing_csat',     label:'Missing CSAT',             icon:'⭐',  border:'yellow',
-    desc:'No customer satisfaction survey created in the current calendar year',
-    match: function(p) {
-      if (isInternal(p)) return false;
-      if (!p.pse_pm_Last_Customer_Survey_Created__c) return true;
-      var d = parseDate(p.pse_pm_Last_Customer_Survey_Created__c);
-      return !d || d.getUTCFullYear() < TODAY.getFullYear();
-    }
+    desc:'No customer satisfaction survey response recorded for the current calendar year',
+    match: function(p) { return !isInternal(p) && !hasCSATThisYear(p); }
   },
   { id:'milestones',       label:'Milestones Due (30d)',     icon:'🏁', border:'red',
-    desc:'Billable milestones with due date in the next 30 days',
+    desc:'Billable milestones with target date in the next 30 days',
     match: function(p) { return !isInternal(p) && hasBillableMilestoneDueSoon(p); } }
 ];
 
