@@ -72,7 +72,7 @@ var SOQL_SELECT = [
   'psa_pm_Project_Sub_Type__c, pse__Practice__r.Name, pse__Region__r.Name,',
   'pse__Billing_Type__c, PSA_PM_Margin_Percent__c,',
   '(SELECT Id, PSA_PM_Adoption_Event_Status__c, PSA_PM_Adoption_Event_Date__c, PSA_PM_Start_Date__c FROM Adoption_Events__r),',
-  '(SELECT Id, Name, pse__Target_Date__c, pse__Include_In_Financials__c, RecordType.Name FROM pse__Milestones__r),',
+  '(SELECT Id, Name, pse__Target_Date__c, pse__Include_In_Financials__c FROM pse__Milestones__r WHERE pse__Include_In_Financials__c = true),',
   '(SELECT Id, psa_pm_Survey_Sent_Date__c, psa_pm_Survey_Response_Date__c FROM Customer_Surveys__r WHERE psa_pm_Survey_Sent_Date__c != null ORDER BY psa_pm_Survey_Sent_Date__c DESC LIMIT 1),',
   '(SELECT Id, PSA_PM_Status_Report_Week__c FROM Status_Reports__r ORDER BY PSA_PM_Status_Report_Week__c DESC LIMIT 1),',
   '(SELECT Id, pse__Resource__c, pse__Role__c FROM pse__Assignments__r WHERE pse__Role__c = \'Delivery Manager\')',
