@@ -10,3 +10,5 @@ services:
         value: https://infa.my.salesforce.com
       - key: SF_TOKEN
         sync: false         # set this manually in Render dashboard (keep secret)
+      - key: ADMIN_PASSWORD
+        sync: false         # password to protect the /admin token-update page
