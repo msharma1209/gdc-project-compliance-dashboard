@@ -125,8 +125,11 @@
     box-shadow: 0 8px 40px rgba(13,33,87,0.35), 0 2px 8px rgba(13,33,87,0.2);
     border: none;
   }
-  /* ── Charts Row (inner cards) ── */
-  #charts-row { display: grid; grid-template-columns: 1fr 2fr 2fr; gap: 14px; }
+  /* ── Charts Rows (inner cards) ── */
+  #charts-row  { display: grid; grid-template-columns: 1fr 2fr 2fr; gap: 14px; }
+  #charts-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+  #chart-health-wrap { height: 220px; }
+  #chart-dm-wrap     { height: 220px; }
   .chart-card {
     background: rgba(255,255,255,0.92); border: none; border-radius: 16px;
     box-shadow: 0 2px 12px rgba(30,80,160,0.07);
@@ -211,8 +214,8 @@
   #detail-kpi-badge small { display: block; font-size: 0.65rem; color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
 
   /* Responsive */
-  @media (max-width: 1100px) { #charts-row { grid-template-columns: 1fr 1fr; } #charts-row .chart-card:first-child { grid-column: span 2; } #chart-doughnut-wrap { height: 160px; } #charts-container { padding: 14px; } }
-  @media (max-width: 700px) { #charts-row { grid-template-columns: 1fr; } #charts-row .chart-card:first-child { grid-column: span 1; } #main, #detail-view { padding: 14px 12px; } #app-header, #dm-filter-bar { padding-left: 12px; padding-right: 12px; } #detail-banner { flex-wrap: wrap; } #charts-container { padding: 10px; } }
+  @media (max-width: 1100px) { #charts-row { grid-template-columns: 1fr 1fr; } #charts-row .chart-card:first-child { grid-column: span 2; } #chart-doughnut-wrap { height: 160px; } #charts-container { padding: 14px; } #charts-row-2 { grid-template-columns: 1fr; } }
+  @media (max-width: 700px) { #charts-row { grid-template-columns: 1fr; } #charts-row .chart-card:first-child { grid-column: span 1; } #charts-row-2 { grid-template-columns: 1fr; } #main, #detail-view { padding: 14px 12px; } #app-header, #dm-filter-bar { padding-left: 12px; padding-right: 12px; } #detail-banner { flex-wrap: wrap; } #charts-container { padding: 10px; } }
 </style>
 </head>
 <body>
@@ -282,6 +285,7 @@
     <!-- TAB: Analytics -->
     <div class="tab-panel active" id="tab-analytics">
       <div id="charts-container">
+        <!-- Row 1: 3 existing charts -->
         <div id="charts-row">
           <div class="chart-card">
             <div class="chart-title"><span class="chart-title-icon">❤️‍🔥</span> Engagement Health</div>
@@ -294,6 +298,17 @@
           <div class="chart-card">
             <div class="chart-title"><span class="chart-title-icon">💳</span> Project Categorization — By Billing Type</div>
             <div class="chart-wrap" id="chart-billing-wrap"><canvas id="chart-billing"></canvas></div>
+          </div>
+        </div>
+        <!-- Row 2: 2 new charts -->
+        <div id="charts-row-2">
+          <div class="chart-card">
+            <div class="chart-title"><span class="chart-title-icon">🏥</span> Health Indicators</div>
+            <div class="chart-wrap" id="chart-health-wrap"><canvas id="chart-health"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title"><span class="chart-title-icon">👤</span> Projects by Delivery Manager</div>
+            <div class="chart-wrap" id="chart-dm-wrap"><canvas id="chart-dm"></canvas></div>
           </div>
         </div>
       </div>
@@ -375,7 +390,7 @@ var state = {
   allProjects: [], filtered: [], displayed: [],
   activeDM: 'all', searchQuery: '', sortCol: null, sortDir: 'asc',
   dataSource: 'bundled',
-  charts: { doughnut: null, practice: null, billing: null },
+  charts: { doughnut: null, practice: null, billing: null, health: null, dm: null },
   detail: { projects: [], displayed: [], searchQuery: '', sortCol: null, sortDir: 'asc', kpi: null }
 };
 
@@ -1094,6 +1109,49 @@ function renderBillingChart(){
     });
   }}});
 }
+function renderHealthChart(){
+  var fields=['pse__Financial_Status__c','pse__Schedule_Status__c','pse__Scope_Status__c'];
+  var g=[0,0,0],y=[0,0,0],r=[0,0,0],n=[0,0,0];
+  state.filtered.forEach(function(p){ fields.forEach(function(f,i){ var v=p[f]; if(!v)n[i]++; else if(v==='Green')g[i]++; else if(v==='Yellow')y[i]++; else if(v==='Red')r[i]++; else n[i]++; }); });
+  var ds=[
+    {label:'Green', data:g, backgroundColor:'rgba(52,211,153,0.75)', borderRadius:3},
+    {label:'Yellow',data:y, backgroundColor:'rgba(251,191,36,0.75)',  borderRadius:3},
+    {label:'Red',   data:r, backgroundColor:'rgba(248,113,113,0.75)', borderRadius:3},
+    {label:'N/A',   data:n, backgroundColor:'rgba(148,163,184,0.45)', borderRadius:3}
+  ];
+  if(state.charts.health){
+    ds.forEach(function(d,i){ state.charts.health.data.datasets[i].data=d.data; });
+    state.charts.health.update('none'); return;
+  }
+  var ctx=document.getElementById('chart-health').getContext('2d');
+  state.charts.health=new Chart(ctx,{type:'bar',data:{labels:['Financial','Schedule','Scope'],datasets:ds},options:{responsive:true,maintainAspectRatio:false,scales:{x:{stacked:true,ticks:{color:'#475569',font:{size:11}},grid:{display:false},border:{display:false}},y:{stacked:true,ticks:{color:'#475569',font:{size:11},stepSize:1},grid:{display:false},border:{display:false}}},plugins:{legend:{position:'bottom',labels:{color:'#64748b',font:{size:11},padding:8,boxWidth:10,usePointStyle:true,pointStyle:'circle'}},tooltip:{callbacks:{label:function(c){return '  '+c.dataset.label+': '+c.raw;}}}}}});
+}
+function renderDMChart(){
+  var counts={};
+  DELIVERY_MANAGERS.forEach(function(dm){ counts[dm.name]=0; });
+  state.filtered.forEach(function(p){
+    var dm=DELIVERY_MANAGERS.find(function(d){ return d.id===p._dmId; });
+    if(dm) counts[dm.name]=(counts[dm.name]||0)+1;
+  });
+  var labels=DELIVERY_MANAGERS.map(function(d){ return d.name; });
+  var data=labels.map(function(n){ return counts[n]||0; });
+  var colors=DELIVERY_MANAGERS.map(function(d){ return d.color; });
+  if(state.charts.dm){
+    state.charts.dm.data.datasets[0].data=data;
+    state.charts.dm.update('none'); return;
+  }
+  var ctx=document.getElementById('chart-dm').getContext('2d');
+  state.charts.dm=new Chart(ctx,{type:'bar',data:{labels:labels,datasets:[{data:data,backgroundColor:colors.map(function(c){ return c+'bb'; }),borderRadius:6,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,scales:{x:{ticks:{color:'#475569',font:{size:11}},grid:{display:false},border:{display:false}},y:{ticks:{color:'#475569',font:{size:11},stepSize:1},grid:{display:false},border:{display:false}}},plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return '  '+c.raw+' projects';}}}}
+  ,onClick:function(evt,elements){
+    if(!elements||!elements.length) return;
+    var dm=DELIVERY_MANAGERS[elements[0].index];
+    showDetailView({
+      id:'dm_'+dm.id, label:dm.name, icon:'👤',
+      desc:'Projects for '+dm.name,
+      match:function(p){ return p._dmId===dm.id; }
+    });
+  }}});
+}
 
 function renderMainTableHeader(){
   buildTableHeader(
@@ -1118,7 +1176,7 @@ function renderMainTableBody(){
 function refreshMain(){
   applyDMFilter(); applySearchFilter(); applySort(state.displayed, state.sortCol, state.sortDir);
   updateDMDot();
-  renderKPIs(); renderDoughnutChart(); renderPracticeChart(); renderBillingChart();
+  renderKPIs(); renderDoughnutChart(); renderPracticeChart(); renderBillingChart(); renderHealthChart(); renderDMChart();
   renderMainTableHeader(); renderMainTableBody();
 }
 
@@ -1205,6 +1263,8 @@ function init(){
         if(state.charts.doughnut) state.charts.doughnut.resize();
         if(state.charts.practice) state.charts.practice.resize();
         if(state.charts.billing)  state.charts.billing.resize();
+        if(state.charts.health)   state.charts.health.resize();
+        if(state.charts.dm)       state.charts.dm.resize();
       }
     });
   });
