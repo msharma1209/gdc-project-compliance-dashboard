@@ -102,6 +102,22 @@
   .kpi-breakdown-count { font-size: 0.85rem; font-weight: 700; color: var(--heading); min-width: 20px; text-align: right; }
   .kpi-breakdown-bar { height: 4px; border-radius: 2px; margin-top: 1px; transition: width 0.3s; }
 
+  /* ── Main Tabs ── */
+  #main-tabs { display: flex; flex-direction: row; gap: 0; padding: 20px 24px 0; background: transparent; }
+  .main-tab-btn {
+    display: flex; align-items: center; gap: 8px;
+    padding: 12px 20px 10px; background: none; border: none; border-bottom: 3px solid transparent;
+    font-size: 0.95rem; font-weight: 600; color: var(--muted); cursor: pointer;
+    font-family: inherit; transition: color 0.15s, border-color 0.15s;
+    letter-spacing: -0.1px; white-space: nowrap;
+  }
+  .main-tab-btn:hover { color: var(--blue); }
+  .main-tab-btn.active { color: var(--blue); border-bottom-color: var(--blue); }
+  .main-tab-btn .tab-icon { font-size: 1rem; }
+  #tab-divider { height: 1px; background: var(--border); margin: 0 0 24px; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
   /* ── Charts Container (outer panel) — dark navy like reference site ── */
   #charts-container {
     background: linear-gradient(135deg, #0d2157 0%, #1a3a7c 60%, #1e4699 100%);
@@ -254,9 +270,17 @@
 
 <!-- ═══ MAIN VIEW ═══ -->
 <div id="main-view">
+  <!-- Tab Bar -->
+  <div id="main-tabs">
+    <button class="main-tab-btn active" data-tab="analytics"><span class="tab-icon">📈</span> Analytics</button>
+    <button class="main-tab-btn" data-tab="kpi"><span class="tab-icon">📊</span> KPI</button>
+    <button class="main-tab-btn" data-tab="projects"><span class="tab-icon">📋</span> All Projects</button>
+  </div>
+  <div id="tab-divider"></div>
   <div id="main">
-    <section id="charts-section">
-      <div class="section-header">📈 Analytics</div>
+
+    <!-- TAB: Analytics -->
+    <div class="tab-panel active" id="tab-analytics">
       <div id="charts-container">
         <div id="charts-row">
           <div class="chart-card">
@@ -273,13 +297,16 @@
           </div>
         </div>
       </div>
-    </section>
-    <section id="kpi-section">
+    </div>
+
+    <!-- TAB: KPI -->
+    <div class="tab-panel" id="tab-kpi">
       <div class="section-header">📊 Key Performance Indicators — click any tile to view matching projects</div>
       <div id="kpi-grid"></div>
-    </section>
-    <section id="table-section">
-      <div class="section-header">📋 All Projects</div>
+    </div>
+
+    <!-- TAB: All Projects -->
+    <div class="tab-panel" id="tab-projects">
       <div id="table-controls">
         <input id="search-box" type="text" placeholder="Search project, account, DM..." autocomplete="off">
         <span id="row-count"></span>
@@ -290,7 +317,7 @@
           <tbody id="table-body"></tbody>
         </table>
       </div>
-    </section>
+    </div>
   </div>
 </div>
 
@@ -1165,6 +1192,22 @@ function init(){
   renderDMFilterBar(); renderMainTableHeader();
 
   document.getElementById('dm-select').addEventListener('change',function(){ state.activeDM=this.value; refreshMain(); });
+
+  // ── Tab switching ──
+  document.querySelectorAll('.main-tab-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      document.querySelectorAll('.main-tab-btn').forEach(function(b){ b.classList.remove('active'); });
+      document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
+      btn.classList.add('active');
+      document.getElementById('tab-'+btn.getAttribute('data-tab')).classList.add('active');
+      // Resize charts when Analytics tab becomes visible (canvas needs re-render)
+      if(btn.getAttribute('data-tab')==='analytics'){
+        if(state.charts.doughnut) state.charts.doughnut.resize();
+        if(state.charts.practice) state.charts.practice.resize();
+        if(state.charts.billing)  state.charts.billing.resize();
+      }
+    });
+  });
 
   document.getElementById('search-box').addEventListener('input',function(e){
     state.searchQuery=e.target.value; applySearchFilter(); applySort(state.displayed,state.sortCol,state.sortDir); renderMainTableBody();
