@@ -56,7 +56,8 @@ var DM_IDS = [
   '0036S00005dvoulQAA', // Upasana Barbaruah
 ];
 
-var SOQL = [
+// ── Shared SELECT fields (used in both queries) ───────────────────────────────
+var SOQL_SELECT = [
   'SELECT Id, Name, pse__Stage__c, pse__Project_Status__c, pse__Start_Date__c,',
   'pse__End_Date__c, psa_pm_PercentComplete__c, pse__Planned_Hours__c,',
   'pse__Scheduled_Hours_Remaining__c, PSA_PM_Total_Billable_Hours_Remaining__c,',
@@ -73,20 +74,23 @@ var SOQL = [
   '(SELECT Id, PSA_PM_Adoption_Event_Status__c, PSA_PM_Adoption_Event_Date__c FROM Adoption_Events__r),',
   '(SELECT Id, Name, pse__Target_Date__c, pse__Include_In_Financials__c FROM pse__Milestones__r WHERE pse__Include_In_Financials__c = true),',
   '(SELECT Id, psa_pm_Survey_Sent_Date__c, psa_pm_Survey_Response_Date__c FROM Customer_Surveys__r WHERE psa_pm_Survey_Sent_Date__c != null ORDER BY psa_pm_Survey_Sent_Date__c DESC LIMIT 1),',
-  // Status reports sub-query — used to derive MAX(PSA_PM_Status_Report_Week__c) reliably
   '(SELECT Id, PSA_PM_Status_Report_Week__c FROM Status_Reports__r ORDER BY PSA_PM_Status_Report_Week__c DESC LIMIT 1),',
-  // Assignments sub-query — to detect DMs assigned with Role = Delivery Manager
   '(SELECT Id, pse__Resource__c, pse__Role__c FROM pse__Assignments__r WHERE pse__Role__c = \'Delivery Manager\')',
   'FROM pse__Proj__c',
-  "WHERE pse__Stage__c = 'In Progress'",
-  "AND (pse__Project_Manager__c IN (" + DM_IDS.map(function (id) { return "'" + id + "'"; }).join(',') + ")",
-  "OR Id IN (SELECT pse__Project__c FROM pse__Assignment__c WHERE pse__Role__c = 'Delivery Manager' AND pse__Resource__c IN (" + DM_IDS.map(function (id) { return "'" + id + "'"; }).join(',') + ")))",
-  'ORDER BY pse__Project_Manager__r.Name, LastModifiedDate DESC LIMIT 200',
 ].join(' ');
 
-// ── Run SOQL query ────────────────────────────────────────────────────────────
-function runQuery(accessToken, instanceUrl, res) {
-  var sfUrl  = instanceUrl + '/services/data/v59.0/query?q=' + encodeURIComponent(SOQL);
+var SOQL_SUFFIX = "AND pse__Stage__c = 'In Progress' ORDER BY pse__Project_Manager__r.Name, LastModifiedDate DESC LIMIT 200";
+var DM_IN       = "(" + DM_IDS.map(function (id) { return "'" + id + "'"; }).join(',') + ")";
+
+// Query 1: projects where DM is Project Manager
+var SOQL_BY_PM  = SOQL_SELECT + " WHERE pse__Project_Manager__c IN " + DM_IN + " " + SOQL_SUFFIX;
+
+// Query 2: projects where DM is assigned as Delivery Manager (semi-join at top level — SOQL requirement)
+var SOQL_BY_DM  = SOQL_SELECT + " WHERE Id IN (SELECT pse__Project__c FROM pse__Assignment__c WHERE pse__Role__c = 'Delivery Manager' AND pse__Resource__c IN " + DM_IN + ") " + SOQL_SUFFIX;
+
+// ── Run a single SOQL string, return parsed JSON via callback ─────────────────
+function fetchSOQL(soql, accessToken, instanceUrl, callback) {
+  var sfUrl  = instanceUrl + '/services/data/v59.0/query?q=' + encodeURIComponent(soql);
   var parsed = url.parse(sfUrl);
   var options = {
     hostname: parsed.hostname,
@@ -103,20 +107,56 @@ function runQuery(accessToken, instanceUrl, res) {
     sfRes.on('data', function (c) { chunks.push(c); });
     sfRes.on('end', function () {
       var body = Buffer.concat(chunks).toString('utf8');
-      res.writeHead(sfRes.statusCode, {
-        'Content-Type':                'application/json',
-        'Access-Control-Allow-Origin': '*',
-      });
-      res.end(body);
+      if (sfRes.statusCode === 401 || body.indexOf('INVALID_SESSION_ID') !== -1) {
+        return callback(new Error('INVALID_SESSION_ID'));
+      }
+      try {
+        callback(null, JSON.parse(body), sfRes.statusCode);
+      } catch (e) {
+        callback(new Error('JSON parse error: ' + e.message));
+      }
     });
   });
 
-  sfReq.on('error', function (err) {
-    res.writeHead(502, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'Upstream Salesforce error: ' + err.message }));
-  });
-
+  sfReq.on('error', function (err) { callback(err); });
   sfReq.end();
+}
+
+// ── Run both queries, merge + deduplicate, respond ───────────────────────────
+function runQuery(accessToken, instanceUrl, res) {
+  var results = {};
+  var pending = 2;
+  var failed  = null;
+
+  function done(err, data) {
+    if (failed) return;  // already responded with error
+    if (err) {
+      failed = true;
+      // Token expired — clear and signal caller to retry
+      if (err.message === 'INVALID_SESSION_ID') {
+        return res.__tokenExpired();
+      }
+      res.writeHead(502, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: err.message }));
+      return;
+    }
+    if (data) {
+      (data.records || []).forEach(function (r) { results[r.Id] = r; });
+    }
+    pending--;
+    if (pending === 0) {
+      var merged = Object.keys(results).map(function (k) { return results[k]; });
+      var out = JSON.stringify({ totalSize: merged.length, done: true, records: merged });
+      res.writeHead(200, {
+        'Content-Type':                'application/json',
+        'Access-Control-Allow-Origin': '*',
+      });
+      res.end(out);
+    }
+  }
+
+  fetchSOQL(SOQL_BY_PM,  accessToken, instanceUrl, done);
+  fetchSOQL(SOQL_BY_DM,  accessToken, instanceUrl, done);
 }
 
 // ── /api/projects ─────────────────────────────────────────────────────────────
@@ -126,6 +166,15 @@ function handleApiProjects(res) {
     res.end(JSON.stringify({ error: 'No SF token set. Visit /admin to update the token.' }));
     return;
   }
+
+  // Attach a helper so runQuery can signal token expiry
+  res.__tokenExpired = function () {
+    console.log('  ⚠️  Token expired — clearing cache. Visit /admin to update token.');
+    tokenCache.accessToken = '';
+    res.writeHead(401, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'INVALID_SESSION_ID' }));
+  };
+
   runQuery(tokenCache.accessToken, tokenCache.instanceUrl, res);
 }
 
