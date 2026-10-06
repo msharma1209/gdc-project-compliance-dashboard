@@ -397,12 +397,12 @@ var KPI_DEFS = [
     desc:'Projects with no overall project status set',
     match: function(p) { return !isInternal(p) && !p.pse__Project_Status__c; } },
   { id:'missing_reports',  label:'Missing Status Reports',   icon:'📋', border:'yellow',
-    desc:'Status report not updated in the last 2 weeks',
+    desc:'Status report not filed in last 14 days (from Status_Reports__r)',
     match: function(p) {
       if (isInternal(p)) return false;
-      if (!p.PSA_PM_Last_Project_Status_Report_Week__c) return true;
-      var d = parseDate(p.PSA_PM_Last_Project_Status_Report_Week__c);
-      return d && daysDiff(TODAY, d) > 14;
+      if (!p._lastStatusReport) return true;  // never filed
+      var d = parseDate(p._lastStatusReport);
+      return d && daysDiff(TODAY, d) > 14;    // last report older than 14 days
     }
   },
   { id:'red_status',       label:'Red Status',               icon:'🔴', border:'red',
@@ -600,7 +600,7 @@ function getSortVal(p, col) {
     case 'csat':         return p.pse_pm_Last_Customer_Survey_Created__c||'';
     case 'adoption_exc': return p.PSA_Adoption_Event_Not_Required_Reason__c||'';
     case 'practice':     return ((p.pse__Practice__r&&p.pse__Practice__r.Name)||'').toLowerCase();
-    case 'last_report':  return p.PSA_PM_Last_Project_Status_Report_Week__c||'';
+    case 'last_report':  return p._lastStatusReport||'';
     // legacy sort keys (used by charts/filter)
     case 'account':      return ((p.pse__Account__r&&p.pse__Account__r.Name)||'').toLowerCase();
     case 'dm':           return ((p.pse__Project_Manager__r&&p.pse__Project_Manager__r.Name)||'').toLowerCase();
@@ -719,10 +719,10 @@ function buildDetailRow(p) {
   pracS.textContent=pracN; if(pracN==='—') pracS.style.color='var(--muted)';
   tdPrac.appendChild(pracS); tr.appendChild(tdPrac);
 
-  // 14. Last Status Report
+  // 14. Last Status Report (derived from Status_Reports__r sub-query MAX)
   var tdLR=document.createElement('td');
   var lrS=document.createElement('span');
-  var lrV=p.PSA_PM_Last_Project_Status_Report_Week__c;
+  var lrV=p._lastStatusReport;
   if(!lrV){
     lrS.textContent='Never'; lrS.style.color='#ef4444';
   } else {
@@ -988,9 +988,21 @@ function refreshMain(){
   renderMainTableHeader(); renderMainTableBody();
 }
 
+/* ── NORMALISE — derive computed fields from sub-queries ── */
+function normaliseProjects(records) {
+  records.forEach(function(p) {
+    // MAX(PSA_PM_Status_Report_Week__c) from Status_Reports__r sub-query
+    var recs = p.Status_Reports__r && p.Status_Reports__r.records;
+    p._lastStatusReport = (recs && recs.length > 0)
+      ? recs[0].PSA_PM_Status_Report_Week__c   // already ordered DESC LIMIT 1
+      : null;
+  });
+  return records;
+}
+
 /* ── LOAD DATA ── */
 function loadData(source, records){
-  state.allProjects=records; state.dataSource=source;
+  state.allProjects=normaliseProjects(records); state.dataSource=source;
   var badge=document.getElementById('data-source-badge');
   badge.className=source==='live'?'badge-live':'badge-bundled';
   badge.textContent=source==='live'?'LIVE':'BUNDLED';
