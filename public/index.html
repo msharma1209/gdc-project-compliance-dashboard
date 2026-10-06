@@ -452,8 +452,9 @@ function fetchLiveData() {
 
 /* ── FILTER / SORT (main) ── */
 function applyDMFilter() {
-  state.filtered = state.activeDM==='all' ? state.allProjects.slice()
-    : state.allProjects.filter(function(p){ return p.pse__Project_Manager__c===state.activeDM; });
+  var base = state.allProjects.filter(function(p){ return !isInternal(p); });
+  state.filtered = state.activeDM==='all' ? base
+    : base.filter(function(p){ return p.pse__Project_Manager__c===state.activeDM; });
 }
 function applySearchFilter() {
   var q=state.searchQuery.toLowerCase().trim();
