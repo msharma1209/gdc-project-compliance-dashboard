@@ -466,8 +466,15 @@ var KPI_DEFS = [
     desc:'Projects with no AE record at all AND no exemption reason set',
     match: function(p) { return !isInternal(p) && hasMissingAdoptionEvent(p); } },
   { id:'missing_csat',     label:'Missing CSAT',             icon:'⭐',  border:'yellow',
-    desc:'No customer satisfaction survey ever recorded (pse_pm_Last_Customer_Survey_Created__c is null)',
-    match: function(p) { return !isInternal(p) && !p.pse_pm_Last_Customer_Survey_Created__c; }
+    desc:'No survey sent, or last survey sent more than 3 months ago',
+    match: function(p) {
+      if (isInternal(p)) return false;
+      if (!p._lastCSAT) return true;  // no survey sent ever
+      var d = parseDate(p._lastCSAT);
+      if (!d) return true;
+      // flag if sent date > 3 months ago (today - 90 days)
+      return daysDiff(TODAY, d) > 90;
+    }
   },
   { id:'milestones',       label:'Milestones Due (30d)',     icon:'🏁', border:'red',
     desc:'Billable milestones with target date in the next 30 days',
@@ -576,7 +583,7 @@ var SHARED_COLUMNS = [
   {key:'margin',       label:'Margin %',            sortable:true },
   {key:'planned_hrs',  label:'Planned Hours',       sortable:true },
   {key:'timecard',     label:'Last Timecard',       sortable:true },
-  {key:'csat',         label:'Last CSAT',           sortable:true },
+  {key:'csat',         label:'Last CSAT Sent On',   sortable:true },
   {key:'adoption_exc', label:'Adoption Not Req.',   sortable:true },
   {key:'practice',     label:'Practice',            sortable:true },
   {key:'last_report',  label:'Last Status Report',  sortable:true }
@@ -697,11 +704,16 @@ function buildDetailRow(p) {
   }
   tdTC.appendChild(tcS); tr.appendChild(tdTC);
 
-  // 11. Last CSAT (MAX survey response date from Customer_Surveys__r sub-query)
+  // 11. Last CSAT Sent On (MAX psa_pm_Survey_Sent_Date__c from Customer_Surveys__r)
   var tdCS=document.createElement('td');
   var csS=document.createElement('span');
-  if(!p._lastCSAT){ csS.textContent='—'; csS.style.color='var(--muted)'; }
-  else { csS.textContent=fmtDate(p._lastCSAT); csS.style.color='var(--muted)'; }
+  if(!p._lastCSAT){
+    csS.textContent='Never'; csS.style.color='#ef4444';
+  } else {
+    csS.textContent=fmtDate(p._lastCSAT);
+    var csD=parseDate(p._lastCSAT);
+    csS.style.color=(csD&&daysDiff(TODAY,csD)>90)?'#ef4444':'var(--muted)';
+  }
   tdCS.appendChild(csS); tr.appendChild(tdCS);
 
   // 12. Adoption Not Required reason
