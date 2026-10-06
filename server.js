@@ -49,9 +49,9 @@ var tokenCache = {
 
 // ── SOQL ──────────────────────────────────────────────────────────────────────
 var DM_IDS = [
-  '003VM00000JsZylYAF', // Megha Sharma
-  '0033f00000Cd4ZVAAZ', // Hanumanth Kulkarni
   '003VM00000V6fl2YAB', // Aparna Kochukuttan
+  '0033f00000Cd4ZVAAZ', // Hanumanth Kulkarni
+  '003VM00000JsZylYAF', // Megha Sharma
   '0033f000006Jdm4AAC', // Suman Viswanathan
   '0036S00005dvoulQAA', // Upasana Barbaruah
 ];
@@ -74,9 +74,12 @@ var SOQL = [
   '(SELECT Id, Name, pse__Target_Date__c, pse__Include_In_Financials__c FROM pse__Milestones__r WHERE pse__Include_In_Financials__c = true),',
   '(SELECT Id, psa_pm_Survey_Sent_Date__c, psa_pm_Survey_Response_Date__c FROM Customer_Surveys__r WHERE psa_pm_Survey_Sent_Date__c != null ORDER BY psa_pm_Survey_Sent_Date__c DESC LIMIT 1),',
   // Status reports sub-query — used to derive MAX(PSA_PM_Status_Report_Week__c) reliably
-  '(SELECT Id, PSA_PM_Status_Report_Week__c FROM Status_Reports__r ORDER BY PSA_PM_Status_Report_Week__c DESC LIMIT 1)',
+  '(SELECT Id, PSA_PM_Status_Report_Week__c FROM Status_Reports__r ORDER BY PSA_PM_Status_Report_Week__c DESC LIMIT 1),',
+  // Assignments sub-query — to detect DMs assigned with Role = Delivery Manager
+  '(SELECT Id, pse__Resource__c, pse__Role__c FROM pse__Assignments__r WHERE pse__Role__c = \'Delivery Manager\')',
   'FROM pse__Proj__c',
-  "WHERE pse__Project_Manager__c IN (" + DM_IDS.map(function (id) { return "'" + id + "'"; }).join(',') + ")",
+  "WHERE (pse__Project_Manager__c IN (" + DM_IDS.map(function (id) { return "'" + id + "'"; }).join(',') + ")",
+  "OR Id IN (SELECT pse__Project__c FROM pse__Assignment__c WHERE pse__Resource__c IN (" + DM_IDS.map(function (id) { return "'" + id + "'"; }).join(',') + ") AND pse__Role__c = 'Delivery Manager'))",
   "AND pse__Stage__c = 'In Progress'",
   'ORDER BY pse__Project_Manager__r.Name, LastModifiedDate DESC LIMIT 200',
 ].join(' ');

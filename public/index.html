@@ -262,9 +262,9 @@ var TODAY        = new Date();
 var SF_INSTANCE  = 'https://infa.my.salesforce.com';
 
 var DELIVERY_MANAGERS = [
-  { id: '003VM00000JsZylYAF', name: 'Megha Sharma',       color: '#5b6cf9' },
-  { id: '0033f00000Cd4ZVAAZ', name: 'Hanumanth Kulkarni', color: '#8b5cf6' },
   { id: '003VM00000V6fl2YAB', name: 'Aparna Kochukuttan', color: '#06b6d4' },
+  { id: '0033f00000Cd4ZVAAZ', name: 'Hanumanth Kulkarni', color: '#8b5cf6' },
+  { id: '003VM00000JsZylYAF', name: 'Megha Sharma',       color: '#5b6cf9' },
   { id: '0033f000006Jdm4AAC', name: 'Suman Viswanathan',  color: '#f59e0b' },
   { id: '0036S00005dvoulQAA', name: 'Upasana Barbaruah',  color: '#10b981' }
 ];
@@ -536,7 +536,7 @@ function fetchLiveData() {
 function applyDMFilter() {
   var base = state.allProjects.filter(function(p){ return !isInternal(p); });
   state.filtered = state.activeDM==='all' ? base
-    : base.filter(function(p){ return p.pse__Project_Manager__c===state.activeDM; });
+    : base.filter(function(p){ return p._dmId === state.activeDM; });
 }
 function applySearchFilter() {
   var q=state.searchQuery.toLowerCase().trim();
@@ -635,7 +635,7 @@ function buildDetailRow(p) {
   // 2. Project Manager (with DM colour dot — same person in this data model)
   var tdPM=document.createElement('td');
   var chip=document.createElement('div'); chip.className='dm-chip';
-  var dmInf=DM_MAP[p.pse__Project_Manager__c];
+  var dmInf=DM_MAP[p._dmId||p.pse__Project_Manager__c];
   var dot=document.createElement('span'); dot.className='dm-dot'; dot.style.background=dmInf?dmInf.color:'#8892aa';
   var pmN=(p.pse__Project_Manager__r&&p.pse__Project_Manager__r.Name)?p.pse__Project_Manager__r.Name:'—';
   var pmTxt=document.createElement('span'); pmTxt.textContent=pmN;
@@ -1002,6 +1002,9 @@ function refreshMain(){
 
 /* ── NORMALISE — derive computed fields from sub-queries ── */
 function normaliseProjects(records) {
+  var dmIdSet = {};
+  DELIVERY_MANAGERS.forEach(function(dm){ dmIdSet[dm.id] = true; });
+
   records.forEach(function(p) {
     // MAX(PSA_PM_Status_Report_Week__c) from Status_Reports__r sub-query
     var srRecs = p.Status_Reports__r && p.Status_Reports__r.records;
@@ -1014,6 +1017,24 @@ function normaliseProjects(records) {
     p._lastCSAT = (csRecs && csRecs.length > 0)
       ? csRecs[0].psa_pm_Survey_Sent_Date__c  // already ordered DESC LIMIT 1 by sent date
       : null;
+
+    // Determine which DM owns this project — either as Project Manager or as
+    // an assigned resource with Role = 'Delivery Manager'
+    if (dmIdSet[p.pse__Project_Manager__c]) {
+      p._dmId = p.pse__Project_Manager__c;
+    } else {
+      // look in pse__Assignments__r for a DM-role assignment
+      var asgns = p.pse__Assignments__r && p.pse__Assignments__r.records;
+      p._dmId = null;
+      if (asgns) {
+        for (var i = 0; i < asgns.length; i++) {
+          if (dmIdSet[asgns[i].pse__Resource__c]) {
+            p._dmId = asgns[i].pse__Resource__c;
+            break;
+          }
+        }
+      }
+    }
   });
   return records;
 }
