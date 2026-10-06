@@ -49,9 +49,25 @@ var tokenCache = {
 
 // ── SOQL ──────────────────────────────────────────────────────────────────────
 var DM_IDS = [
+  '0033f000006Jdw8AAC', // Abhishek Kumar
+  '0033f000006JdRWAA0', // Akhil Naik
   '003VM00000V6fl2YAB', // Aparna Kochukuttan
+  '0033f000006JdmOAAS', // Arun Kumar
+  '0036S00005dSp8jQAC', // Ayush Sharma
+  '0033f000006JdoAAAS', // Chandrasekar K
+  '0033f000006JdtTAAS', // Chinmayanand Jha
+  '0033f000006JdoSAAS', // Devendar Yadav
+  '0033f000006JdwoAAC', // Dhananjay Kumar Sinha
+  '0033f000006JdVJAA0', // Edwin Sukumar
   '0033f00000Cd4ZVAAZ', // Hanumanth Kulkarni
+  '0033f000006Je4iAAC', // Kamalesh Purushotham
   '003VM00000JsZylYAF', // Megha Sharma
+  '0033f000006Jdz7AAC', // Muthukumar Somasundaram
+  '0033f000006JdPeAAK', // Naveen Bendigeri
+  '0036S00005eH6ZqQAK', // Nimisha Sarma
+  '0033f000006JdsGAAS', // Rahul K
+  '0033f000006JdJAAA0', // Shiladitya Biswas
+  '0033f000006JeDYAA0', // Sowmya Shivashankar
   '0033f000006Jdm4AAC', // Suman Viswanathan
   '0036S00005dvoulQAA', // Upasana Barbaruah
 ];
