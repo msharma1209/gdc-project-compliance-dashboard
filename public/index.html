@@ -331,6 +331,17 @@ function hasActiveForecastAdoption(p) {
     return s === 'forecast' || s === 'final';
   });
 }
+// True when a project genuinely has no adoption event coverage AND no exemption reason:
+//   - no Adoption_Event__c records at all (any status)  AND
+//   - PSA_Adoption_Event_Not_Required_Reason__c is blank/null
+function hasMissingAdoptionEvent(p) {
+  // Exempt if a reason is provided
+  if (p.PSA_Adoption_Event_Not_Required_Reason__c) return false;
+  // Exempt if ANY adoption event record exists (regardless of status)
+  var events = p.Adoption_Events__r && p.Adoption_Events__r.records;
+  if (events && events.length > 0) return false;
+  return true;
+}
 // Helper: does the project have an adoption event in Forecast state due within 30 days?
 function hasUpcomingForecastAdoption(p) {
   var events = p.Adoption_Events__r && p.Adoption_Events__r.records;
@@ -449,8 +460,8 @@ var KPI_DEFS = [
     desc:'Adoption event in Forecast state with due date in the next 30 days',
     match: function(p) { return !isInternal(p) && hasUpcomingForecastAdoption(p); } },
   { id:'adoption_missing', label:'Missing Adoption Events',  icon:'❌',  border:'red',
-    desc:'Billable projects with no adoption event in Forecast or Final state',
-    match: function(p) { return !isInternal(p) && !hasActiveForecastAdoption(p); } },
+    desc:'Projects with no AE record at all AND no exemption reason set',
+    match: function(p) { return !isInternal(p) && hasMissingAdoptionEvent(p); } },
   { id:'missing_csat',     label:'Missing CSAT',             icon:'⭐',  border:'yellow',
     desc:'No customer satisfaction survey response recorded for the current calendar year',
     match: function(p) { return !isInternal(p) && !hasCSATThisYear(p); }
