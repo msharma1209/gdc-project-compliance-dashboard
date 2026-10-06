@@ -52,11 +52,22 @@
   .badge-bundled { background: #fef9c3; color: #a16207;       border: 1px solid rgba(217,119,6,0.3); }
 
   /* ── DM Filter Bar ── */
-  #dm-filter-bar { display: flex; gap: 8px; padding: 12px 24px; background: rgba(255,255,255,0.7); backdrop-filter: blur(8px); border-bottom: 1px solid rgba(200,215,240,0.4); flex-wrap: wrap; align-items: center; }
-  .dm-filter-btn { display: flex; align-items: center; gap: 6px; padding: 6px 16px; border-radius: 24px; border: 1px solid var(--border); background: #ffffff; color: var(--muted); font-size: 0.8rem; cursor: pointer; transition: all 0.15s; font-weight: 500; font-family: inherit; }
-  .dm-filter-btn:hover { border-color: var(--blue); color: var(--blue); background: rgba(1,118,211,0.04); }
-  .dm-filter-btn.active { color: var(--blue); background: rgba(1,118,211,0.08); border-color: var(--blue); }
-  .dm-filter-btn[data-dm="all"].active { border-color: var(--blue); color: var(--blue); background: rgba(1,118,211,0.08); }
+  #dm-filter-bar { display: flex; gap: 12px; padding: 10px 24px; background: rgba(255,255,255,0.7); backdrop-filter: blur(8px); border-bottom: 1px solid rgba(200,215,240,0.4); align-items: center; }
+  #dm-filter-bar label { font-size: 0.78rem; font-weight: 600; color: var(--muted); white-space: nowrap; }
+  #dm-select-wrap { position: relative; display: inline-flex; align-items: center; }
+  #dm-color-dot { width: 9px; height: 9px; border-radius: 50%; position: absolute; left: 12px; pointer-events: none; background: var(--blue); }
+  #dm-select {
+    appearance: none; -webkit-appearance: none;
+    background: #ffffff; border: 1px solid var(--border); border-radius: 24px;
+    padding: 6px 36px 6px 28px; font-size: 0.82rem; font-weight: 600;
+    color: var(--heading); cursor: pointer; font-family: inherit;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 12px center;
+    box-shadow: 0 1px 4px rgba(30,80,160,0.08);
+  }
+  #dm-select:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(1,118,211,0.12); }
+  #dm-select:hover { border-color: var(--blue); }
   .dm-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
 
   /* ── Main Layout ── */
@@ -195,10 +206,11 @@
 
 <!-- DM Filter Bar (only shown in main view) -->
 <div id="dm-filter-bar">
-  <button class="dm-filter-btn active" data-dm="all">
-    <span class="dm-dot" style="background:#0176d3;"></span>
-    All DMs
-  </button>
+  <label for="dm-select">👤 Delivery Manager</label>
+  <div id="dm-select-wrap">
+    <span id="dm-color-dot"></span>
+    </select>
+  </div>
 </div>
 
 <!-- ═══ DETAIL VIEW ═══ -->
@@ -877,21 +889,23 @@ function showMainView() {
    MAIN VIEW RENDERS
 ══════════════════════════════════════════════════ */
 function renderDMFilterBar() {
-  var bar=document.getElementById('dm-filter-bar');
-  Array.prototype.slice.call(bar.querySelectorAll('[data-dm]:not([data-dm="all"])')).forEach(function(el){ el.remove(); });
-  var allBtn=bar.querySelector('[data-dm="all"]');
-  allBtn.className='dm-filter-btn'+(state.activeDM==='all'?' active':'');
-  DELIVERY_MANAGERS.forEach(function(dm){
-    var btn=document.createElement('button');
-    var isActive=state.activeDM===dm.id;
-    btn.className='dm-filter-btn'+(isActive?' active':'');
-    btn.setAttribute('data-dm',dm.id);
-    if(isActive){ btn.style.borderColor=dm.color; btn.style.color=dm.color; }
-    var dot=document.createElement('span'); dot.className='dm-dot'; dot.style.background=dm.color;
-    btn.appendChild(dot); btn.appendChild(document.createTextNode(dm.name));
-    btn.addEventListener('click',function(){ state.activeDM=dm.id; refreshMain(); });
-    bar.appendChild(btn);
-  });
+  var sel=document.getElementById('dm-select');
+  // populate options once (skip if already populated)
+  if(sel.options.length<=1){
+    DELIVERY_MANAGERS.forEach(function(dm){
+      var opt=document.createElement('option');
+      opt.value=dm.id; opt.textContent=dm.name;
+      sel.appendChild(opt);
+    });
+  }
+  sel.value=state.activeDM;
+  updateDMDot();
+}
+function updateDMDot(){
+  var dot=document.getElementById('dm-color-dot');
+  if(state.activeDM==='all'){ dot.style.background='#0176d3'; return; }
+  var dm=DELIVERY_MANAGERS.find(function(d){ return d.id===state.activeDM; });
+  dot.style.background=dm?dm.color:'#0176d3';
 }
 
 function renderKPIs() {
@@ -1061,15 +1075,7 @@ function renderMainTableBody(){
 /* ── REFRESH MAIN ── */
 function refreshMain(){
   applyDMFilter(); applySearchFilter(); applySort(state.displayed, state.sortCol, state.sortDir);
-  var bar=document.getElementById('dm-filter-bar');
-  var allBtn=bar.querySelector('[data-dm="all"]');
-  allBtn.className='dm-filter-btn'+(state.activeDM==='all'?' active':'');
-  DELIVERY_MANAGERS.forEach(function(dm){
-    var btn=bar.querySelector('[data-dm="'+dm.id+'"]'); if(!btn) return;
-    var isActive=state.activeDM===dm.id;
-    btn.className='dm-filter-btn'+(isActive?' active':'');
-    btn.style.borderColor=isActive?dm.color:''; btn.style.color=isActive?dm.color:'';
-  });
+  updateDMDot();
   renderKPIs(); renderDoughnutChart(); renderPracticeChart(); renderBillingChart();
   renderMainTableHeader(); renderMainTableBody();
 }
@@ -1143,7 +1149,7 @@ function loadData(source, records){
 function init(){
   renderDMFilterBar(); renderMainTableHeader();
 
-  document.querySelector('[data-dm="all"]').addEventListener('click',function(){ state.activeDM='all'; refreshMain(); });
+  document.getElementById('dm-select').addEventListener('change',function(){ state.activeDM=this.value; refreshMain(); });
 
   document.getElementById('search-box').addEventListener('input',function(e){
     state.searchQuery=e.target.value; applySearchFilter(); applySort(state.displayed,state.sortCol,state.sortDir); renderMainTableBody();
