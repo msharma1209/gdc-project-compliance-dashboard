@@ -814,7 +814,7 @@ function buildTableBody(tbodyEl, rows, columns, rowBuilder, emptyMsg) {
 ══════════════════════════════════════════════════ */
 function showDetailView(kpi) {
   state.detail.kpi         = kpi;
-  state.detail.projects    = state.allProjects.filter(function(p){ return hasRecentTimecard(p) && kpi.match(p); });
+  state.detail.projects    = state.filtered.filter(function(p){ return kpi.match(p); });
   state.detail.displayed   = state.detail.projects.slice();
   state.detail.searchQuery = '';
   state.detail.sortCol     = null;
