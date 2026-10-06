@@ -533,7 +533,7 @@ function getSortVal(p, col) {
     case 'name':      return (p.Name||'').toLowerCase();
     case 'account':   return ((p.pse__Account__r&&p.pse__Account__r.Name)||'').toLowerCase();
     case 'region':    return ((p.pse__Region__r&&p.pse__Region__r.Name)||'').toLowerCase();
-    case 'pm':        return ((p.pse__Engagement_Manager__r&&p.pse__Engagement_Manager__r.Name)||'').toLowerCase();
+    case 'pm':        return ((p.pse__Project_Manager__r&&p.pse__Project_Manager__r.Name)||'').toLowerCase();
     case 'dm':        return ((p.pse__Project_Manager__r&&p.pse__Project_Manager__r.Name)||'').toLowerCase();
     case 'status':    return p.pse__Project_Status__c||'';
     case 'timecard':  return p.psa_tm_Last_Time_Entry_Date__c||'';
@@ -572,9 +572,9 @@ function buildDetailRow(p) {
   if(regN==='—') regS.style.color='var(--muted)';
   tdReg.appendChild(regS); tr.appendChild(tdReg);
 
-  // Project Manager (Engagement Manager)
+  // Project Manager
   var tdPM=document.createElement('td');
-  var pmN=(p.pse__Engagement_Manager__r&&p.pse__Engagement_Manager__r.Name)?p.pse__Engagement_Manager__r.Name:'—';
+  var pmN=(p.pse__Project_Manager__r&&p.pse__Project_Manager__r.Name)?p.pse__Project_Manager__r.Name:'—';
   var pmS=document.createElement('span'); pmS.textContent=pmN;
   if(pmN==='—') pmS.style.color='var(--muted)';
   tdPM.appendChild(pmS); tr.appendChild(tdPM);
