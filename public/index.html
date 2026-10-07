@@ -102,6 +102,17 @@
   .kpi-breakdown-count { font-size: 0.85rem; font-weight: 700; color: var(--heading); min-width: 20px; text-align: right; }
   .kpi-breakdown-bar { height: 4px; border-radius: 2px; margin-top: 1px; transition: width 0.3s; }
 
+  /* ── KPI Outer Container (dark navy, matches Analytics) ── */
+  #kpi-outer-container {
+    background: linear-gradient(135deg, #0d2157 0%, #1a3a7c 60%, #1e4699 100%);
+    border-radius: 24px; padding: 22px;
+    box-shadow: 0 8px 40px rgba(13,33,87,0.35), 0 2px 8px rgba(13,33,87,0.2);
+    margin-bottom: 0;
+  }
+  #kpi-grid .kpi-card {
+    background: rgba(255,255,255,0.92);
+  }
+
   /* ── KPI Summary Table ── */
   #kpi-summary-wrap { margin-top: 32px; }
   #kpi-summary-header { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: var(--muted); margin-bottom: 14px; }
@@ -331,8 +342,10 @@
 
     <!-- TAB: KPI -->
     <div class="tab-panel" id="tab-kpi">
-      <div class="section-header">📊 Key Performance Indicators — click any tile to view matching projects</div>
-      <div id="kpi-grid"></div>
+      <div id="kpi-outer-container">
+        <div class="section-header" style="color:#94a3b8;margin-bottom:18px;">📊 Key Performance Indicators — click any tile to view matching projects</div>
+        <div id="kpi-grid"></div>
+      </div>
       <div id="kpi-summary-wrap">
         <div id="kpi-summary-header">✅ Compliance Summary</div>
         <table class="kpi-summary-table">
@@ -1092,6 +1105,24 @@ function renderKPISummary() {
   var total = totalKPI ? state.filtered.filter(totalKPI.match).length : state.filtered.length;
   var denom = total || 1;
 
+  // Reframed names for table (positive/compliance framing)
+  var TABLE_NAMES = {
+    total:             'Total Active Projects',
+    no_status:         'Status Updated',
+    missing_reports:   'Status Reports Filed',
+    red_status:        'Not Red Status',
+    past_end:          'Within End Date',
+    ending_oct:        'Ending by Oct 2026',
+    low_margin:        'Healthy Margin (≥50%)',
+    timecard:          'Timecard Up to Date',
+    zero_hours:        'Planned Hours Entered',
+    planned_lt_billed: 'Hours Within Budget',
+    adoption_upcoming: 'Adoption Events Forecasted',
+    adoption_missing:  'Adoption Events Covered',
+    missing_csat:      'CSAT Survey Sent',
+    milestones:        'Milestones Due (30d)'
+  };
+
   // KPIs where higher flagged count = good (informational, not a compliance failure)
   var positiveIds = { total: true, adoption_upcoming: true, milestones: true };
 
@@ -1102,21 +1133,19 @@ function renderKPISummary() {
     if (kpi.id === 'total') {
       pct = 100;
     } else if (positiveIds[kpi.id]) {
-      // % of total that have this (informational)
       pct = Math.round((flagged / denom) * 100);
     } else {
-      // compliance: % that are NOT flagged
       pct = Math.round(((denom - flagged) / denom) * 100);
     }
 
     var tr = document.createElement('tr');
 
-    // Col 1: KPI Name
+    // Col 1: KPI Name (reframed)
     var tdName = document.createElement('td');
     var nameWrap = document.createElement('div'); nameWrap.className = 'kpi-sum-name';
     var iconSpan = document.createElement('span'); iconSpan.className = 'kpi-sum-icon'; iconSpan.textContent = kpi.icon;
     nameWrap.appendChild(iconSpan);
-    nameWrap.appendChild(document.createTextNode(kpi.label));
+    nameWrap.appendChild(document.createTextNode(TABLE_NAMES[kpi.id] || kpi.label));
     tdName.appendChild(nameWrap);
     tr.appendChild(tdName);
 
