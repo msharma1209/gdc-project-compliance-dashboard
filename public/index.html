@@ -1311,7 +1311,27 @@ function renderHealthChart(){
     state.charts.health.update('none'); return;
   }
   var ctx=document.getElementById('chart-health').getContext('2d');
-  state.charts.health=new Chart(ctx,{type:'bar',data:{labels:['Financial','Schedule','Scope'],datasets:ds},options:{responsive:true,maintainAspectRatio:false,scales:{x:{stacked:true,ticks:{color:'#475569',font:{size:11}},grid:{display:false},border:{display:false}},y:{stacked:true,ticks:{color:'#475569',font:{size:11},stepSize:1},grid:{display:false},border:{display:false}}},plugins:{legend:{position:'bottom',labels:{color:'#64748b',font:{size:11},padding:8,boxWidth:10,usePointStyle:true,pointStyle:'circle'}},tooltip:{callbacks:{label:function(c){return '  '+c.dataset.label+': '+c.raw;}}}}}});
+  var HEALTH_FIELDS={'Financial':'pse__Financial_Status__c','Schedule':'pse__Schedule_Status__c','Scope':'pse__Scope_Status__c'};
+  state.charts.health=new Chart(ctx,{type:'bar',data:{labels:['Financial','Schedule','Scope'],datasets:ds},options:{responsive:true,maintainAspectRatio:false,scales:{x:{stacked:true,ticks:{color:'#475569',font:{size:11}},grid:{display:false},border:{display:false}},y:{stacked:true,ticks:{color:'#475569',font:{size:11},stepSize:1},grid:{display:false},border:{display:false}}},plugins:{legend:{position:'bottom',labels:{color:'#64748b',font:{size:11},padding:8,boxWidth:10,usePointStyle:true,pointStyle:'circle'}},tooltip:{callbacks:{label:function(c){return '  '+c.dataset.label+': '+c.raw;}}}},onClick:function(evt,elements){
+    if(!elements||!elements.length) return;
+    var el=elements[0];
+    var axisLabel=state.charts.health.data.labels[el.index]; // Financial / Schedule / Scope
+    var statusLabel=state.charts.health.data.datasets[el.datasetIndex].label; // Green/Yellow/Red/N/A
+    var fieldKey=HEALTH_FIELDS[axisLabel];
+    var icons={'Green':'🟢','Yellow':'🟡','Red':'🔴','N/A':'⬜'};
+    showDetailView({
+      id:'health_'+axisLabel.toLowerCase()+'_'+statusLabel.toLowerCase(),
+      label:axisLabel+' Status: '+statusLabel,
+      icon:icons[statusLabel]||'🏥',
+      desc:axisLabel+' Status is '+statusLabel,
+      match:function(p){
+        if(!fieldKey) return false;
+        var v=p[fieldKey];
+        if(statusLabel==='N/A') return !v||v==='';
+        return v===statusLabel;
+      }
+    });
+  }}});
 }
 function renderDMChart(){
   var counts={};
