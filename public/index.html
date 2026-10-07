@@ -76,22 +76,49 @@
   .badge-bundled { background: #fef9c3; color: #a16207;       border: 1px solid rgba(217,119,6,0.3); }
 
   /* ── DM Filter Bar ── */
-  #dm-filter-bar { display: flex; gap: 12px; padding: 10px 24px; background: rgba(255,255,255,0.7); backdrop-filter: blur(8px); border-bottom: 1px solid rgba(200,215,240,0.4); align-items: center; }
+  #dm-filter-bar { display: flex; gap: 12px; padding: 10px 24px; background: rgba(255,255,255,0.7); backdrop-filter: blur(8px); border-bottom: 1px solid rgba(200,215,240,0.4); align-items: center; flex-wrap: wrap; }
   #dm-filter-bar label { font-size: 0.78rem; font-weight: 600; color: var(--muted); white-space: nowrap; }
-  #dm-select-wrap { position: relative; display: inline-flex; align-items: center; }
-  #dm-color-dot { width: 9px; height: 9px; border-radius: 50%; position: absolute; left: 12px; pointer-events: none; background: var(--blue); }
-  #dm-select {
-    appearance: none; -webkit-appearance: none;
+  /* Trigger button */
+  #dm-trigger {
+    display: inline-flex; align-items: center; gap: 8px;
     background: #ffffff; border: 1px solid var(--border); border-radius: 24px;
-    padding: 6px 36px 6px 28px; font-size: 0.82rem; font-weight: 600;
+    padding: 6px 14px; font-size: 0.82rem; font-weight: 600;
     color: var(--heading); cursor: pointer; font-family: inherit;
     transition: border-color 0.15s, box-shadow 0.15s;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
-    background-repeat: no-repeat; background-position: right 12px center;
     box-shadow: 0 1px 4px rgba(30,80,160,0.08);
+    user-select: none;
   }
-  #dm-select:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(1,118,211,0.12); }
-  #dm-select:hover { border-color: var(--blue); }
+  #dm-trigger:hover { border-color: var(--blue); }
+  #dm-trigger.active { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(1,118,211,0.12); }
+  #dm-trigger-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--blue); flex-shrink: 0; }
+  #dm-trigger-label { flex: 1; }
+  #dm-trigger-arrow { font-size: 0.65rem; color: var(--muted); transition: transform 0.2s; }
+  #dm-trigger.open #dm-trigger-arrow { transform: rotate(180deg); }
+  /* Selected DM chips shown in bar */
+  #dm-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .dm-chip-tag { display: inline-flex; align-items: center; gap: 5px; background: rgba(1,118,211,0.1); border: 1px solid rgba(1,118,211,0.25); border-radius: 20px; padding: 3px 10px 3px 8px; font-size: 0.75rem; font-weight: 600; color: var(--blue); }
+  .dm-chip-tag .dm-chip-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .dm-chip-tag .dm-chip-x { cursor: pointer; font-size: 0.7rem; color: var(--muted); margin-left: 2px; line-height: 1; }
+  .dm-chip-tag .dm-chip-x:hover { color: var(--red); }
+  /* Dropdown panel */
+  #dm-panel {
+    display: none; position: absolute; z-index: 300;
+    background: #ffffff; border: 1px solid var(--border); border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(30,80,160,0.14); padding: 10px 0;
+    min-width: 240px; max-height: 360px; overflow-y: auto;
+  }
+  #dm-panel.open { display: block; }
+  .dm-panel-header { display: flex; justify-content: space-between; align-items: center; padding: 6px 14px 10px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+  .dm-panel-header span { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); }
+  .dm-panel-actions { display: flex; gap: 10px; }
+  .dm-panel-actions button { background: none; border: none; font-size: 0.75rem; color: var(--blue); cursor: pointer; font-family: inherit; font-weight: 600; padding: 0; }
+  .dm-panel-actions button:hover { text-decoration: underline; }
+  .dm-checkbox-row { display: flex; align-items: center; gap: 10px; padding: 7px 14px; cursor: pointer; transition: background 0.1s; }
+  .dm-checkbox-row:hover { background: rgba(1,118,211,0.05); }
+  .dm-checkbox-row input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--blue); cursor: pointer; flex-shrink: 0; }
+  .dm-checkbox-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .dm-checkbox-name { font-size: 0.82rem; font-weight: 500; color: var(--heading); }
+  #dm-select-wrap { position: relative; }
   .dm-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
 
   /* ── Main Layout ── */
@@ -301,13 +328,25 @@
 
 <!-- DM Filter Bar (only shown in main view) -->
 <div id="dm-filter-bar">
-  <label for="dm-select">👤 Delivery Manager</label>
+  <label>👤 Delivery Manager</label>
   <div id="dm-select-wrap">
-    <span id="dm-color-dot"></span>
-    <select id="dm-select">
-      <option value="all">All DMs</option>
-    </select>
+    <div id="dm-trigger">
+      <span id="dm-trigger-dot"></span>
+      <span id="dm-trigger-label">All DMs</span>
+      <span id="dm-trigger-arrow">▼</span>
+    </div>
+    <div id="dm-panel">
+      <div class="dm-panel-header">
+        <span>Filter by DM</span>
+        <div class="dm-panel-actions">
+          <button id="dm-select-all">All</button>
+          <button id="dm-clear-all">Clear</button>
+        </div>
+      </div>
+      <div id="dm-checkbox-list"></div>
+    </div>
   </div>
+  <div id="dm-chips"></div>
 </div>
 
 <!-- ═══ DETAIL VIEW ═══ -->
@@ -481,7 +520,8 @@ var BUNDLED_DATA = [
 /* ── STATE ── */
 var state = {
   allProjects: [], filtered: [], displayed: [],
-  activeDM: 'all', searchQuery: '', sortCol: null, sortDir: 'asc',
+  activeDMs: {},   // map of dmId → true for selected; empty = all
+  searchQuery: '', sortCol: null, sortDir: 'asc',
   dataSource: 'bundled',
   charts: { doughnut: null, practice: null, billing: null, health: null, dm: null },
   detail: { projects: [], displayed: [], searchQuery: '', sortCol: null, sortDir: 'asc', kpi: null }
@@ -706,8 +746,10 @@ function applyDMFilter() {
   var base = state.allProjects.filter(function(p){
     return !isInternal(p) && hasRecentTimecard(p);
   });
-  state.filtered = state.activeDM==='all' ? base
-    : base.filter(function(p){ return p._dmId === state.activeDM; });
+  var anySelected = Object.keys(state.activeDMs).length > 0;
+  state.filtered = anySelected
+    ? base.filter(function(p){ return state.activeDMs[p._dmId]; })
+    : base;
 }
 function applySearchFilter() {
   var q=state.searchQuery.toLowerCase().trim();
@@ -1039,32 +1081,74 @@ function showMainView() {
    MAIN VIEW RENDERS
 ══════════════════════════════════════════════════ */
 function renderDMFilterBar() {
-  var sel=document.getElementById('dm-select');
-  // Build set of DM IDs that have at least one project (ignoring active DM filter)
-  var base=state.allProjects.filter(function(p){ return !isInternal(p) && hasRecentTimecard(p); });
-  var activeDMIds={};
-  base.forEach(function(p){ if(p._dmId) activeDMIds[p._dmId]=true; });
+  var base = state.allProjects.filter(function(p){ return !isInternal(p) && hasRecentTimecard(p); });
+  var activeDMIds = {};
+  base.forEach(function(p){ if(p._dmId) activeDMIds[p._dmId] = true; });
 
-  // Rebuild options each time so it stays live
-  // Keep current value if it still has projects, else reset to 'all'
-  var prevVal=sel.value;
-  while(sel.options.length>1) sel.remove(1); // remove all except 'All DMs'
-  DELIVERY_MANAGERS.forEach(function(dm){
-    if(!activeDMIds[dm.id]) return; // skip DMs with no projects
-    var opt=document.createElement('option');
-    opt.value=dm.id; opt.textContent=dm.name;
-    sel.appendChild(opt);
+  // Remove any selected DMs that no longer have projects
+  Object.keys(state.activeDMs).forEach(function(id){
+    if(!activeDMIds[id]) delete state.activeDMs[id];
   });
-  // restore selection if still valid, else fall back to 'all'
-  sel.value=(prevVal==='all'||activeDMIds[prevVal])?prevVal:'all';
-  if(sel.value!==state.activeDM){ state.activeDM=sel.value; }
-  updateDMDot();
+
+  // Rebuild checkbox list
+  var list = document.getElementById('dm-checkbox-list');
+  clearEl(list);
+  DELIVERY_MANAGERS.forEach(function(dm){
+    if(!activeDMIds[dm.id]) return;
+    var row = document.createElement('label'); row.className = 'dm-checkbox-row';
+    var cb = document.createElement('input'); cb.type = 'checkbox'; cb.value = dm.id;
+    cb.checked = !!state.activeDMs[dm.id];
+    cb.addEventListener('change', function(){
+      if(this.checked) state.activeDMs[dm.id] = true;
+      else delete state.activeDMs[dm.id];
+      refreshMain();
+    });
+    var dot = document.createElement('span'); dot.className = 'dm-checkbox-dot'; dot.style.background = dm.color;
+    var name = document.createElement('span'); name.className = 'dm-checkbox-name'; name.textContent = dm.name;
+    row.appendChild(cb); row.appendChild(dot); row.appendChild(name);
+    list.appendChild(row);
+  });
+
+  updateDMTrigger();
+  renderDMChips(activeDMIds);
 }
-function updateDMDot(){
-  var dot=document.getElementById('dm-color-dot');
-  if(state.activeDM==='all'){ dot.style.background='#0176d3'; return; }
-  var dm=DELIVERY_MANAGERS.find(function(d){ return d.id===state.activeDM; });
-  dot.style.background=dm?dm.color:'#0176d3';
+
+function updateDMTrigger() {
+  var selected = Object.keys(state.activeDMs);
+  var trigger = document.getElementById('dm-trigger');
+  var dot = document.getElementById('dm-trigger-dot');
+  var lbl = document.getElementById('dm-trigger-label');
+  if(selected.length === 0) {
+    dot.style.background = '#0176d3';
+    lbl.textContent = 'All DMs';
+  } else if(selected.length === 1) {
+    var dm = DM_MAP[selected[0]];
+    dot.style.background = dm ? dm.color : '#0176d3';
+    lbl.textContent = dm ? dm.name : '1 DM';
+  } else {
+    dot.style.background = '#0176d3';
+    lbl.textContent = selected.length + ' DMs selected';
+  }
+}
+
+function renderDMChips(activeDMIds) {
+  var wrap = document.getElementById('dm-chips');
+  clearEl(wrap);
+  var selected = Object.keys(state.activeDMs);
+  selected.forEach(function(id){
+    var dm = DM_MAP[id];
+    if(!dm || !activeDMIds[id]) return;
+    var chip = document.createElement('div'); chip.className = 'dm-chip-tag';
+    var dot = document.createElement('span'); dot.className = 'dm-chip-dot'; dot.style.background = dm.color;
+    var name = document.createElement('span'); name.textContent = dm.name;
+    var x = document.createElement('span'); x.className = 'dm-chip-x'; x.textContent = '✕';
+    x.addEventListener('click', function(){
+      delete state.activeDMs[id];
+      refreshMain();
+    });
+    chip.appendChild(dot); chip.appendChild(name); chip.appendChild(x);
+    wrap.appendChild(chip);
+  });
 }
 
 function renderKPIs() {
@@ -1459,7 +1543,37 @@ function loadData(source, records){
 function init(){
   renderDMFilterBar(); renderMainTableHeader();
 
-  document.getElementById('dm-select').addEventListener('change',function(){ state.activeDM=this.value; refreshMain(); });
+  // ── DM multi-select panel toggle ──
+  var trigger = document.getElementById('dm-trigger');
+  var panel   = document.getElementById('dm-panel');
+  trigger.addEventListener('click', function(e){
+    e.stopPropagation();
+    var open = panel.classList.toggle('open');
+    trigger.classList.toggle('open', open);
+  });
+  document.addEventListener('click', function(e){
+    if(!panel.contains(e.target) && e.target !== trigger){
+      panel.classList.remove('open');
+      trigger.classList.remove('open');
+    }
+  });
+  document.getElementById('dm-select-all').addEventListener('click', function(e){
+    e.stopPropagation();
+    // tick all visible checkboxes
+    document.querySelectorAll('#dm-checkbox-list input[type=checkbox]').forEach(function(cb){
+      cb.checked = true;
+      state.activeDMs[cb.value] = true;
+    });
+    refreshMain();
+  });
+  document.getElementById('dm-clear-all').addEventListener('click', function(e){
+    e.stopPropagation();
+    document.querySelectorAll('#dm-checkbox-list input[type=checkbox]').forEach(function(cb){
+      cb.checked = false;
+    });
+    state.activeDMs = {};
+    refreshMain();
+  });
 
   // ── Tab switching ──
   document.querySelectorAll('.main-tab-btn').forEach(function(btn){
