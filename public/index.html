@@ -1675,6 +1675,11 @@ function init(){
   });
 
   fetchLiveData().then(function(r){ loadData(r.source,r.records); });
+
+  // Auto-refresh every 30 minutes to keep server awake + data fresh
+  setInterval(function(){
+    fetchLiveData().then(function(r){ loadData(r.source,r.records); });
+  }, 30 * 60 * 1000);
 }
 
 document.readyState==='loading'
