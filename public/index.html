@@ -113,20 +113,33 @@
     background: rgba(255,255,255,0.92);
   }
 
-  /* ── KPI Summary Table ── */
-  #kpi-summary-wrap { margin-top: 32px; }
-  #kpi-summary-header { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: var(--muted); margin-bottom: 14px; }
-  .kpi-summary-table { width: 100%; border-collapse: collapse; border-radius: 18px; overflow: hidden; box-shadow: 0 4px 24px rgba(30,80,160,0.08), 0 1px 4px rgba(30,80,160,0.04); background: rgba(255,255,255,0.86); backdrop-filter: blur(8px); }
-  .kpi-summary-table thead tr { background: rgba(240,246,255,0.92); border-bottom: 1px solid rgba(200,215,240,0.5); }
-  .kpi-summary-table th { padding: 11px 20px; text-align: left; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); white-space: nowrap; }
-  .kpi-summary-table th:last-child { text-align: right; }
-  .kpi-summary-table td { padding: 11px 20px; font-size: 0.85rem; border-bottom: 1px solid rgba(200,215,240,0.3); vertical-align: middle; }
-  .kpi-summary-table tr:last-child td { border-bottom: none; }
-  .kpi-summary-table tbody tr { cursor: pointer; transition: background 0.1s; }
-  .kpi-summary-table tbody tr:hover { background: rgba(1,118,211,0.04); }
-  .kpi-sum-name { display: flex; align-items: center; gap: 9px; font-weight: 600; color: var(--heading); }
-  .kpi-sum-icon { font-size: 1rem; line-height: 1; }
-  .kpi-sum-pct { font-size: 0.9rem; font-weight: 700; text-align: right; }
+  /* ── KPI Compliance Bar List ── */
+  #kpi-summary-wrap {
+    margin-top: 28px;
+    background: linear-gradient(135deg, #0d2157 0%, #1a3a7c 60%, #1e4699 100%);
+    border-radius: 24px; padding: 22px;
+    box-shadow: 0 8px 40px rgba(13,33,87,0.35), 0 2px 8px rgba(13,33,87,0.2);
+  }
+  #kpi-summary-header { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: rgba(255,255,255,0.55); margin-bottom: 18px; }
+  #kpi-summary-list { display: flex; flex-direction: column; gap: 10px; }
+  .kpi-bar-row {
+    background: rgba(255,255,255,0.07); border-radius: 14px; padding: 14px 18px;
+    cursor: pointer; transition: background 0.15s;
+    display: grid; grid-template-columns: 200px 1fr 52px; align-items: center; gap: 16px;
+  }
+  .kpi-bar-row:hover { background: rgba(255,255,255,0.13); }
+  .kpi-bar-name { display: flex; align-items: center; gap: 8px; }
+  .kpi-bar-icon { font-size: 1rem; line-height: 1; flex-shrink: 0; }
+  .kpi-bar-label { font-size: 0.82rem; font-weight: 600; color: rgba(255,255,255,0.9); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .kpi-bar-track {
+    height: 8px; background: rgba(255,255,255,0.12); border-radius: 99px; overflow: hidden;
+  }
+  .kpi-bar-fill { height: 100%; border-radius: 99px; transition: width 0.5s ease; }
+  .kpi-bar-pct { font-size: 0.88rem; font-weight: 700; text-align: right; white-space: nowrap; }
+  /* Legend strip */
+  #kpi-bar-legend { display: flex; gap: 18px; margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.1); }
+  .kpi-legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.72rem; color: rgba(255,255,255,0.55); }
+  .kpi-legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 
   /* ── Main Tabs ── */
   #main-tabs { display: flex; flex-direction: row; gap: 0; padding: 20px 24px 0; background: transparent; }
@@ -347,16 +360,14 @@
         <div id="kpi-grid"></div>
       </div>
       <div id="kpi-summary-wrap">
-        <div id="kpi-summary-header">✅ Compliance Summary</div>
-        <table class="kpi-summary-table">
-          <thead>
-            <tr>
-              <th>KPI Name</th>
-              <th style="text-align:right">% Achieved</th>
-            </tr>
-          </thead>
-          <tbody id="kpi-summary-body"></tbody>
-        </table>
+        <div id="kpi-summary-header">✅ Compliance Summary — % Achieved per KPI</div>
+        <div id="kpi-summary-list"></div>
+        <div id="kpi-bar-legend">
+          <div class="kpi-legend-item"><span class="kpi-legend-dot" style="background:#4ade80"></span> ≥80% — On Track</div>
+          <div class="kpi-legend-item"><span class="kpi-legend-dot" style="background:#fbbf24"></span> 50–79% — Needs Attention</div>
+          <div class="kpi-legend-item"><span class="kpi-legend-dot" style="background:#f87171"></span> &lt;50% — At Risk</div>
+          <div class="kpi-legend-item"><span class="kpi-legend-dot" style="background:#818cf8"></span> Baseline / Informational</div>
+        </div>
       </div>
     </div>
 
@@ -1096,16 +1107,16 @@ function renderKPIs() {
 }
 
 function renderKPISummary() {
-  var tbody = document.getElementById('kpi-summary-body');
-  if (!tbody) return;
-  clearEl(tbody);
+  var list = document.getElementById('kpi-summary-list');
+  if (!list) return;
+  clearEl(list);
 
-  // Total active projects = denominator (100%)
+  // Total active = denominator (100%)
   var totalKPI = KPI_DEFS.find(function(k){ return k.id === 'total'; });
   var total = totalKPI ? state.filtered.filter(totalKPI.match).length : state.filtered.length;
   var denom = total || 1;
 
-  // Reframed names for table (positive/compliance framing)
+  // Reframed positive names for this table
   var TABLE_NAMES = {
     total:             'Total Active Projects',
     no_status:         'Status Updated',
@@ -1123,8 +1134,8 @@ function renderKPISummary() {
     milestones:        'Milestones Due (30d)'
   };
 
-  // KPIs where higher flagged count = good (informational, not a compliance failure)
-  var positiveIds = { total: true, adoption_upcoming: true, milestones: true };
+  // Informational KPIs (not pure compliance)
+  var infoIds = { total: true, adoption_upcoming: true, milestones: true, ending_oct: true };
 
   KPI_DEFS.forEach(function(kpi) {
     var flagged = state.filtered.filter(kpi.match).length;
@@ -1132,39 +1143,52 @@ function renderKPISummary() {
 
     if (kpi.id === 'total') {
       pct = 100;
-    } else if (positiveIds[kpi.id]) {
+    } else if (infoIds[kpi.id]) {
       pct = Math.round((flagged / denom) * 100);
     } else {
       pct = Math.round(((denom - flagged) / denom) * 100);
     }
 
-    var tr = document.createElement('tr');
-
-    // Col 1: KPI Name (reframed)
-    var tdName = document.createElement('td');
-    var nameWrap = document.createElement('div'); nameWrap.className = 'kpi-sum-name';
-    var iconSpan = document.createElement('span'); iconSpan.className = 'kpi-sum-icon'; iconSpan.textContent = kpi.icon;
-    nameWrap.appendChild(iconSpan);
-    nameWrap.appendChild(document.createTextNode(TABLE_NAMES[kpi.id] || kpi.label));
-    tdName.appendChild(nameWrap);
-    tr.appendChild(tdName);
-
-    // Col 2: % Achieved
-    var tdPct = document.createElement('td'); tdPct.className = 'kpi-sum-pct';
-    tdPct.textContent = pct + '%';
-    if (kpi.id === 'total') {
-      tdPct.style.color = '#6366f1';
-    } else if (positiveIds[kpi.id]) {
-      tdPct.style.color = '#0176d3';
+    // Bar + text color
+    var fillColor, textColor;
+    if (infoIds[kpi.id]) {
+      fillColor = '#818cf8'; textColor = '#a5b4fc';
+    } else if (pct >= 80) {
+      fillColor = '#4ade80'; textColor = '#4ade80';
+    } else if (pct >= 50) {
+      fillColor = '#fbbf24'; textColor = '#fbbf24';
     } else {
-      tdPct.style.color = pct >= 80 ? '#16a34a' : pct >= 50 ? '#d97706' : '#dc2626';
+      fillColor = '#f87171'; textColor = '#f87171';
     }
-    tr.appendChild(tdPct);
+
+    var row = document.createElement('div'); row.className = 'kpi-bar-row';
+
+    // Name col
+    var nameDiv = document.createElement('div'); nameDiv.className = 'kpi-bar-name';
+    var iconSpan = document.createElement('span'); iconSpan.className = 'kpi-bar-icon'; iconSpan.textContent = kpi.icon;
+    var labelSpan = document.createElement('span'); labelSpan.className = 'kpi-bar-label';
+    labelSpan.textContent = TABLE_NAMES[kpi.id] || kpi.label;
+    nameDiv.appendChild(iconSpan); nameDiv.appendChild(labelSpan);
+    row.appendChild(nameDiv);
+
+    // Bar track + fill
+    var track = document.createElement('div'); track.className = 'kpi-bar-track';
+    var fill = document.createElement('div'); fill.className = 'kpi-bar-fill';
+    fill.style.width = pct + '%';
+    fill.style.background = fillColor;
+    track.appendChild(fill);
+    row.appendChild(track);
+
+    // % label
+    var pctDiv = document.createElement('div'); pctDiv.className = 'kpi-bar-pct';
+    pctDiv.style.color = textColor;
+    pctDiv.textContent = pct + '%';
+    row.appendChild(pctDiv);
 
     // Click → drill down
-    (function(k){ tr.addEventListener('click', function(){ showDetailView(k); }); })(kpi);
+    (function(k){ row.addEventListener('click', function(){ showDetailView(k); }); })(kpi);
 
-    tbody.appendChild(tr);
+    list.appendChild(row);
   });
 }
 
