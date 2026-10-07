@@ -102,6 +102,21 @@
   .kpi-breakdown-count { font-size: 0.85rem; font-weight: 700; color: var(--heading); min-width: 20px; text-align: right; }
   .kpi-breakdown-bar { height: 4px; border-radius: 2px; margin-top: 1px; transition: width 0.3s; }
 
+  /* ── KPI Summary Table ── */
+  #kpi-summary-wrap { margin-top: 32px; }
+  #kpi-summary-header { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: var(--muted); margin-bottom: 14px; }
+  .kpi-summary-table { width: 100%; border-collapse: collapse; border-radius: 18px; overflow: hidden; box-shadow: 0 4px 24px rgba(30,80,160,0.08), 0 1px 4px rgba(30,80,160,0.04); background: rgba(255,255,255,0.86); backdrop-filter: blur(8px); }
+  .kpi-summary-table thead tr { background: rgba(240,246,255,0.92); border-bottom: 1px solid rgba(200,215,240,0.5); }
+  .kpi-summary-table th { padding: 11px 20px; text-align: left; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); white-space: nowrap; }
+  .kpi-summary-table th:last-child { text-align: right; }
+  .kpi-summary-table td { padding: 11px 20px; font-size: 0.85rem; border-bottom: 1px solid rgba(200,215,240,0.3); vertical-align: middle; }
+  .kpi-summary-table tr:last-child td { border-bottom: none; }
+  .kpi-summary-table tbody tr { cursor: pointer; transition: background 0.1s; }
+  .kpi-summary-table tbody tr:hover { background: rgba(1,118,211,0.04); }
+  .kpi-sum-name { display: flex; align-items: center; gap: 9px; font-weight: 600; color: var(--heading); }
+  .kpi-sum-icon { font-size: 1rem; line-height: 1; }
+  .kpi-sum-pct { font-size: 0.9rem; font-weight: 700; text-align: right; }
+
   /* ── Main Tabs ── */
   #main-tabs { display: flex; flex-direction: row; gap: 0; padding: 20px 24px 0; background: transparent; }
   .main-tab-btn {
@@ -318,6 +333,18 @@
     <div class="tab-panel" id="tab-kpi">
       <div class="section-header">📊 Key Performance Indicators — click any tile to view matching projects</div>
       <div id="kpi-grid"></div>
+      <div id="kpi-summary-wrap">
+        <div id="kpi-summary-header">✅ Compliance Summary</div>
+        <table class="kpi-summary-table">
+          <thead>
+            <tr>
+              <th>KPI Name</th>
+              <th style="text-align:right">% Achieved</th>
+            </tr>
+          </thead>
+          <tbody id="kpi-summary-body"></tbody>
+        </table>
+      </div>
     </div>
 
     <!-- TAB: All Projects -->
@@ -1055,6 +1082,63 @@ function renderKPIs() {
   });
 }
 
+function renderKPISummary() {
+  var tbody = document.getElementById('kpi-summary-body');
+  if (!tbody) return;
+  clearEl(tbody);
+
+  // Total active projects = denominator (100%)
+  var totalKPI = KPI_DEFS.find(function(k){ return k.id === 'total'; });
+  var total = totalKPI ? state.filtered.filter(totalKPI.match).length : state.filtered.length;
+  var denom = total || 1;
+
+  // KPIs where higher flagged count = good (informational, not a compliance failure)
+  var positiveIds = { total: true, adoption_upcoming: true, milestones: true };
+
+  KPI_DEFS.forEach(function(kpi) {
+    var flagged = state.filtered.filter(kpi.match).length;
+    var pct;
+
+    if (kpi.id === 'total') {
+      pct = 100;
+    } else if (positiveIds[kpi.id]) {
+      // % of total that have this (informational)
+      pct = Math.round((flagged / denom) * 100);
+    } else {
+      // compliance: % that are NOT flagged
+      pct = Math.round(((denom - flagged) / denom) * 100);
+    }
+
+    var tr = document.createElement('tr');
+
+    // Col 1: KPI Name
+    var tdName = document.createElement('td');
+    var nameWrap = document.createElement('div'); nameWrap.className = 'kpi-sum-name';
+    var iconSpan = document.createElement('span'); iconSpan.className = 'kpi-sum-icon'; iconSpan.textContent = kpi.icon;
+    nameWrap.appendChild(iconSpan);
+    nameWrap.appendChild(document.createTextNode(kpi.label));
+    tdName.appendChild(nameWrap);
+    tr.appendChild(tdName);
+
+    // Col 2: % Achieved
+    var tdPct = document.createElement('td'); tdPct.className = 'kpi-sum-pct';
+    tdPct.textContent = pct + '%';
+    if (kpi.id === 'total') {
+      tdPct.style.color = '#6366f1';
+    } else if (positiveIds[kpi.id]) {
+      tdPct.style.color = '#0176d3';
+    } else {
+      tdPct.style.color = pct >= 80 ? '#16a34a' : pct >= 50 ? '#d97706' : '#dc2626';
+    }
+    tr.appendChild(tdPct);
+
+    // Click → drill down
+    (function(k){ tr.addEventListener('click', function(){ showDetailView(k); }); })(kpi);
+
+    tbody.appendChild(tr);
+  });
+}
+
 function renderDoughnutChart(){
   var counts={Green:0,Yellow:0,Red:0,'Not Set':0};
   state.filtered.forEach(function(p){ var t=p.psa_Overall_Project_Status_Trend__c||p.pse__Project_Status__c; if(!t)counts['Not Set']++; else if(t==='Green')counts.Green++; else if(t==='Yellow')counts.Yellow++; else if(t==='Red')counts.Red++; else counts['Not Set']++; });
@@ -1204,7 +1288,7 @@ function renderMainTableBody(){
 function refreshMain(){
   applyDMFilter(); applySearchFilter(); applySort(state.displayed, state.sortCol, state.sortDir);
   renderDMFilterBar(); // rebuild dropdown with only DMs who have active projects
-  renderKPIs(); renderDoughnutChart(); renderPracticeChart(); renderBillingChart(); renderHealthChart(); renderDMChart();
+  renderKPIs(); renderKPISummary(); renderDoughnutChart(); renderPracticeChart(); renderBillingChart(); renderHealthChart(); renderDMChart();
   renderMainTableHeader(); renderMainTableBody();
 }
 
