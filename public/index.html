@@ -1537,7 +1537,10 @@ function loadData(source, records){
   var badge=document.getElementById('data-source-badge');
   badge.className=source==='live'?'badge-live':'badge-bundled';
   badge.textContent=source==='live'?'LIVE':'BUNDLED';
-  document.getElementById('last-refresh').textContent='Updated '+new Date().toLocaleTimeString();
+  var now=new Date();
+  var dateStr=now.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+  var timeStr=now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('last-refresh').textContent='Updated '+dateStr+', '+timeStr;
   refreshMain();
 }
 
