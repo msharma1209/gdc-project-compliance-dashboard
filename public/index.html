@@ -1429,7 +1429,9 @@ function renderDMChart(){
   var data=activeDMs.map(function(d){ return counts[d.name]; });
   var colors=activeDMs.map(function(d){ return d.color; });
   if(state.charts.dm){
+    state.charts.dm.data.labels=labels;
     state.charts.dm.data.datasets[0].data=data;
+    state.charts.dm.data.datasets[0].backgroundColor=colors.map(function(c){ return c+'bb'; });
     state.charts.dm.update('none'); return;
   }
   var ctx=document.getElementById('chart-dm').getContext('2d');
