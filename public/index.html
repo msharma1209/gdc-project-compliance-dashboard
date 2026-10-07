@@ -1219,7 +1219,7 @@ function renderKPISummary() {
 
 function renderDoughnutChart(){
   var counts={Green:0,Yellow:0,Red:0,'Not Set':0};
-  state.filtered.forEach(function(p){ var t=p.psa_Overall_Project_Status_Trend__c||p.pse__Project_Status__c; if(!t)counts['Not Set']++; else if(t==='Green')counts.Green++; else if(t==='Yellow')counts.Yellow++; else if(t==='Red')counts.Red++; else counts['Not Set']++; });
+  state.filtered.forEach(function(p){ var t=p.pse__Project_Status__c; if(!t)counts['Not Set']++; else if(t==='Green')counts.Green++; else if(t==='Yellow')counts.Yellow++; else if(t==='Red')counts.Red++; else counts['Not Set']++; });
   var data=[counts.Green,counts.Yellow,counts.Red,counts['Not Set']];
   if(state.charts.doughnut){ state.charts.doughnut.data.datasets[0].data=data; state.charts.doughnut.update('none'); return; }
   var ctx=document.getElementById('chart-doughnut').getContext('2d');
@@ -1231,7 +1231,7 @@ function renderDoughnutChart(){
       label:'Status: '+label, icon:'🟢',
       desc:'Projects with Overall Status Trend: '+label,
       match:function(p){
-        var t=p.psa_Overall_Project_Status_Trend__c||p.pse__Project_Status__c;
+        var t=p.pse__Project_Status__c;
         if(label==='Not Set') return !t||t==='';
         return t===label;
       }
