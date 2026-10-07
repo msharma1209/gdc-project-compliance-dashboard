@@ -122,13 +122,14 @@
     box-shadow: 0 4px 24px rgba(30,80,160,0.08), 0 1px 4px rgba(30,80,160,0.04);
   }
   #kpi-summary-header { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: var(--muted); margin-bottom: 18px; }
-  #kpi-summary-list { display: flex; flex-direction: column; gap: 10px; }
+  #kpi-summary-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
   .kpi-bar-row {
     background: rgba(1,118,211,0.04); border-radius: 14px; padding: 14px 18px;
     cursor: pointer; transition: background 0.15s;
-    display: grid; grid-template-columns: 200px 1fr 52px; align-items: center; gap: 16px;
+    display: flex; flex-direction: column; gap: 8px;
   }
   .kpi-bar-row:hover { background: rgba(1,118,211,0.09); }
+  .kpi-bar-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   .kpi-bar-name { display: flex; align-items: center; gap: 8px; }
   .kpi-bar-icon { font-size: 1rem; line-height: 1; flex-shrink: 0; }
   .kpi-bar-label { font-size: 0.82rem; font-weight: 600; color: var(--heading); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -254,7 +255,7 @@
   #detail-kpi-badge small { display: block; font-size: 0.65rem; color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
 
   /* Responsive */
-  @media (max-width: 1100px) { #charts-row { grid-template-columns: 1fr 1fr; } #charts-row .chart-card:first-child { grid-column: span 2; } #chart-doughnut-wrap { height: 160px; } #charts-container { padding: 14px; } #charts-row-2 { grid-template-columns: 1fr; } }
+  @media (max-width: 1100px) { #kpi-summary-list { grid-template-columns: repeat(2, 1fr); } #charts-row { grid-template-columns: 1fr 1fr; } #charts-row .chart-card:first-child { grid-column: span 2; } #chart-doughnut-wrap { height: 160px; } #charts-container { padding: 14px; } #charts-row-2 { grid-template-columns: 1fr; } }
   @media (max-width: 700px) { #charts-row { grid-template-columns: 1fr; } #charts-row .chart-card:first-child { grid-column: span 1; } #charts-row-2 { grid-template-columns: 1fr; } #main, #detail-view { padding: 14px 12px; } #app-header, #dm-filter-bar { padding-left: 12px; padding-right: 12px; } #detail-banner { flex-wrap: wrap; } #charts-container { padding: 10px; } }
 </style>
 </head>
@@ -1164,13 +1165,18 @@ function renderKPISummary() {
 
     var row = document.createElement('div'); row.className = 'kpi-bar-row';
 
-    // Name col
+    // Top: name left, % right
+    var topDiv = document.createElement('div'); topDiv.className = 'kpi-bar-top';
     var nameDiv = document.createElement('div'); nameDiv.className = 'kpi-bar-name';
     var iconSpan = document.createElement('span'); iconSpan.className = 'kpi-bar-icon'; iconSpan.textContent = kpi.icon;
     var labelSpan = document.createElement('span'); labelSpan.className = 'kpi-bar-label';
     labelSpan.textContent = TABLE_NAMES[kpi.id] || kpi.label;
     nameDiv.appendChild(iconSpan); nameDiv.appendChild(labelSpan);
-    row.appendChild(nameDiv);
+    var pctDiv = document.createElement('div'); pctDiv.className = 'kpi-bar-pct';
+    pctDiv.style.color = textColor;
+    pctDiv.textContent = pct + '%';
+    topDiv.appendChild(nameDiv); topDiv.appendChild(pctDiv);
+    row.appendChild(topDiv);
 
     // Bar track + fill
     var track = document.createElement('div'); track.className = 'kpi-bar-track';
@@ -1179,12 +1185,6 @@ function renderKPISummary() {
     fill.style.background = fillColor;
     track.appendChild(fill);
     row.appendChild(track);
-
-    // % label
-    var pctDiv = document.createElement('div'); pctDiv.className = 'kpi-bar-pct';
-    pctDiv.style.color = textColor;
-    pctDiv.textContent = pct + '%';
-    row.appendChild(pctDiv);
 
     // Click → drill down
     (function(k){ row.addEventListener('click', function(){ showDetailView(k); }); })(kpi);
