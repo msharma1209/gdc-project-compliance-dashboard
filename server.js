@@ -36,28 +36,13 @@ const { execFile } = require('child_process');
 
 var PORT           = Number(process.env.PORT) || 3500;
 var SF_INSTANCE    = process.env.SF_INSTANCE    || 'https://infa.my.salesforce.com';
+var SF_TOKEN       = process.env.SF_TOKEN       || '';
 var ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'gdc-admin-2024';
 var PUBLIC_DIR     = path.join(__dirname, 'public');
 
-// ── Persistent token store (survives restarts via /tmp file) ──────────────────
-var TOKEN_FILE = path.join(require('os').tmpdir(), 'gdc_sf_token.txt');
-
-function loadPersistedToken() {
-  // Priority: env var > persisted file
-  if (process.env.SF_TOKEN) return process.env.SF_TOKEN;
-  try {
-    var t = fs.readFileSync(TOKEN_FILE, 'utf8').trim();
-    if (t) { console.log('  🔑  Loaded persisted token from', TOKEN_FILE); return t; }
-  } catch(e) {}
-  return '';
-}
-
-function persistToken(token) {
-  try { fs.writeFileSync(TOKEN_FILE, token, 'utf8'); } catch(e) {}
-}
-
+// ── In-memory token store ─────────────────────────────────────────────────────
 var tokenCache = {
-  accessToken: loadPersistedToken(),
+  accessToken: SF_TOKEN,
   instanceUrl: SF_INSTANCE,
 };
 
@@ -340,7 +325,6 @@ function handleUpdateToken(req, res) {
     }
 
     tokenCache.accessToken = newToken;
-    persistToken(newToken);
     console.log('  ✅  SF token updated via /admin at', new Date().toISOString());
 
     res.writeHead(200, { 'Content-Type': 'application/json' });
