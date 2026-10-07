@@ -116,29 +116,30 @@
   /* ── KPI Compliance Bar List ── */
   #kpi-summary-wrap {
     margin-top: 28px;
-    background: linear-gradient(135deg, #0d2157 0%, #1a3a7c 60%, #1e4699 100%);
+    background: rgba(255,255,255,0.82);
+    backdrop-filter: blur(8px);
     border-radius: 24px; padding: 22px;
-    box-shadow: 0 8px 40px rgba(13,33,87,0.35), 0 2px 8px rgba(13,33,87,0.2);
+    box-shadow: 0 4px 24px rgba(30,80,160,0.08), 0 1px 4px rgba(30,80,160,0.04);
   }
-  #kpi-summary-header { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: rgba(255,255,255,0.55); margin-bottom: 18px; }
+  #kpi-summary-header { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: var(--muted); margin-bottom: 18px; }
   #kpi-summary-list { display: flex; flex-direction: column; gap: 10px; }
   .kpi-bar-row {
-    background: rgba(255,255,255,0.07); border-radius: 14px; padding: 14px 18px;
+    background: rgba(1,118,211,0.04); border-radius: 14px; padding: 14px 18px;
     cursor: pointer; transition: background 0.15s;
     display: grid; grid-template-columns: 200px 1fr 52px; align-items: center; gap: 16px;
   }
-  .kpi-bar-row:hover { background: rgba(255,255,255,0.13); }
+  .kpi-bar-row:hover { background: rgba(1,118,211,0.09); }
   .kpi-bar-name { display: flex; align-items: center; gap: 8px; }
   .kpi-bar-icon { font-size: 1rem; line-height: 1; flex-shrink: 0; }
-  .kpi-bar-label { font-size: 0.82rem; font-weight: 600; color: rgba(255,255,255,0.9); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .kpi-bar-label { font-size: 0.82rem; font-weight: 600; color: var(--heading); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .kpi-bar-track {
-    height: 8px; background: rgba(255,255,255,0.12); border-radius: 99px; overflow: hidden;
+    height: 8px; background: rgba(200,215,240,0.5); border-radius: 99px; overflow: hidden;
   }
   .kpi-bar-fill { height: 100%; border-radius: 99px; transition: width 0.5s ease; }
   .kpi-bar-pct { font-size: 0.88rem; font-weight: 700; text-align: right; white-space: nowrap; }
   /* Legend strip */
-  #kpi-bar-legend { display: flex; gap: 18px; margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.1); }
-  .kpi-legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.72rem; color: rgba(255,255,255,0.55); }
+  #kpi-bar-legend { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(200,215,240,0.5); }
+  .kpi-legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.72rem; color: var(--muted); }
   .kpi-legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 
   /* ── Main Tabs ── */
