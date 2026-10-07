@@ -680,8 +680,19 @@ var KPI_DEFS = [
     }
   },
   { id:'milestones',       label:'Milestones Due (30d)',     icon:'🏁', border:'red',
-    desc:'Billable milestones with target date in the next 30 days',
-    match: function(p) { return !isInternal(p) && hasBillableMilestoneDueSoon(p); } }
+    desc:'Billable milestones with target date in the next 30 days — broken down by Practice',
+    match: function(p) { return !isInternal(p) && hasBillableMilestoneDueSoon(p); },
+    breakdown: true,
+    getBreakdown: function(projects) {
+      var counts = {};
+      projects.forEach(function(p) {
+        var prac = (p.pse__Practice__r && p.pse__Practice__r.Name) ? p.pse__Practice__r.Name : 'Unassigned';
+        counts[prac] = (counts[prac] || 0) + 1;
+      });
+      return Object.keys(counts).sort(function(a,b){ return counts[b]-counts[a]; })
+        .map(function(k){ return {label:k, count:counts[k]}; });
+    }
+  }
 ];
 
 /* ── FETCH ── */
@@ -1208,16 +1219,19 @@ function renderKPIs() {
         bar.style.background = color;
         inner.appendChild(top); inner.appendChild(bar);
         bdRow.appendChild(inner);
-        // click — filter detail view to this practice
+        // click — filter detail view to this practice AND the KPI condition
         (function(rowLabel, kpiDef){
           bdRow.addEventListener('click', function(e){
             e.stopPropagation();
             var kpiCopy = {
               id: kpiDef.id+'_'+rowLabel.toLowerCase().replace(/\s+/g,'_'),
-              label: rowLabel,
+              label: kpiDef.icon+' '+kpiDef.label+' — '+rowLabel,
               icon: kpiDef.icon,
-              desc: 'Projects with Practice: ' + rowLabel,
-              match: function(p){ return !isInternal(p) && ((p.pse__Practice__r&&p.pse__Practice__r.Name)||'Unassigned')===rowLabel; }
+              desc: kpiDef.desc+' (Practice: '+rowLabel+')',
+              match: function(p){
+                var prac = (p.pse__Practice__r&&p.pse__Practice__r.Name)||'Unassigned';
+                return kpiDef.match(p) && prac===rowLabel;
+              }
             };
             showDetailView(kpiCopy);
           });
