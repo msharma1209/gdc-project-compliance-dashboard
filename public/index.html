@@ -700,6 +700,24 @@ function hideTokenBanner() {
   var b = document.getElementById('token-banner'); if (b) b.remove();
 }
 
+// ── localStorage snapshot helpers ────────────────────────────────────────────
+var LS_KEY      = 'gdc_live_snapshot';
+var LS_DATE_KEY = 'gdc_live_snapshot_date';
+
+function saveSnapshot(records) {
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify(records));
+    localStorage.setItem(LS_DATE_KEY, new Date().toISOString());
+  } catch(e) { /* storage full or private mode — ignore */ }
+}
+function loadSnapshot() {
+  try {
+    var raw = localStorage.getItem(LS_KEY);
+    if (!raw) return null;
+    return { records: JSON.parse(raw), date: localStorage.getItem(LS_DATE_KEY) };
+  } catch(e) { return null; }
+}
+
 function fetchLiveData() {
   var btn=document.getElementById('refresh-btn');
   btn.classList.add('loading'); clearEl(btn);
@@ -715,23 +733,33 @@ function fetchLiveData() {
     })
     .then(function(data){
       var records=(data&&data.records)?data.records:[];
-      // Salesforce returns errorCode on auth failure inside a 200
       if(data&&data[0]&&data[0].errorCode==='INVALID_SESSION_ID'){
         throw new Error('TOKEN_EXPIRED');
       }
       if(records.length===0) throw new Error('Empty result');
       hideTokenBanner();
       btn.classList.remove('loading'); clearEl(btn); btn.textContent='↺ Refresh';
+      // ✅ Save to localStorage so it becomes the fallback snapshot
+      saveSnapshot(records);
       return {records:records,source:'live'};
     })
     .catch(function(err){
       btn.classList.remove('loading'); clearEl(btn); btn.textContent='↺ Refresh';
+      // Try localStorage snapshot first before falling back to hardcoded data
+      var snapshot = loadSnapshot();
       if(err.message==='TOKEN_EXPIRED'){
-        showTokenBanner('Salesforce token has expired — showing cached data. Update SF_TOKEN in Render environment to restore live data.');
+        if(snapshot){
+          var d = snapshot.date ? new Date(snapshot.date) : null;
+          var dateStr = d ? d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})+', '+d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) : 'unknown time';
+          showTokenBanner('Salesforce token has expired — showing your last live snapshot from '+dateStr+'. Visit /admin to update the token.');
+        } else {
+          showTokenBanner('Salesforce token has expired — showing bundled snapshot. Visit /admin to update the token.');
+        }
       } else {
-        console.warn('Live fetch failed ('+err.message+'), using bundled data.');
+        console.warn('Live fetch failed ('+err.message+').');
       }
-      return {records:BUNDLED_DATA,source:'bundled'};
+      if(snapshot) return {records:snapshot.records, source:'snapshot'};
+      return {records:BUNDLED_DATA, source:'bundled'};
     });
 }
 
@@ -1535,11 +1563,24 @@ function normaliseProjects(records) {
 function loadData(source, records){
   state.allProjects=normaliseProjects(records); state.dataSource=source;
   var badge=document.getElementById('data-source-badge');
-  badge.className=source==='live'?'badge-live':'badge-bundled';
-  badge.textContent=source==='live'?'LIVE':'BUNDLED';
-  var now=new Date();
-  var dateStr=now.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
-  var timeStr=now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  if(source==='live'){
+    badge.className='badge-live'; badge.textContent='LIVE';
+  } else if(source==='snapshot'){
+    badge.className='badge-bundled'; badge.style.background='#e0f2fe'; badge.style.color='#0369a1'; badge.style.border='1px solid rgba(3,105,161,0.3)';
+    badge.textContent='CACHED';
+  } else {
+    badge.className='badge-bundled'; badge.textContent='BUNDLED';
+  }
+  // For snapshot, show when the snapshot was taken; otherwise show now
+  var displayDate;
+  if(source==='snapshot'){
+    var snapshotDate=localStorage.getItem(LS_DATE_KEY);
+    displayDate=snapshotDate?new Date(snapshotDate):new Date();
+  } else {
+    displayDate=new Date();
+  }
+  var dateStr=displayDate.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+  var timeStr=displayDate.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
   document.getElementById('last-refresh').textContent='Updated '+dateStr+', '+timeStr;
   refreshMain();
 }
