@@ -17,6 +17,7 @@ const http        = require('http');
 const https       = require('https');
 const fs          = require('fs');
 const path        = require('path');
+const os          = require('os');
 const { execFile } = require('child_process');
 
 // ── Load .env (local dev only) ────────────────────────────────────────────────
@@ -36,13 +37,28 @@ const { execFile } = require('child_process');
 
 var PORT           = Number(process.env.PORT) || 3500;
 var SF_INSTANCE    = process.env.SF_INSTANCE    || 'https://infa.my.salesforce.com';
-var SF_TOKEN       = process.env.SF_TOKEN       || '';
 var ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'gdc-admin-2024';
 var PUBLIC_DIR     = path.join(__dirname, 'public');
+var TOKEN_FILE     = path.join(os.tmpdir(), 'gdc_sf_token.txt');
+
+// ── Token persistence helpers ─────────────────────────────────────────────────
+function loadToken() {
+  // 1. Env var (set in Render dashboard) — highest priority
+  if (process.env.SF_TOKEN) return process.env.SF_TOKEN;
+  // 2. /tmp file saved by previous /admin update — survives sleep/wake
+  try {
+    var t = fs.readFileSync(TOKEN_FILE, 'utf8').trim();
+    if (t) { console.log('  🔑  Restored token from', TOKEN_FILE); return t; }
+  } catch (e) {}
+  return '';
+}
+function saveToken(token) {
+  try { fs.writeFileSync(TOKEN_FILE, token, 'utf8'); } catch (e) {}
+}
 
 // ── In-memory token store ─────────────────────────────────────────────────────
 var tokenCache = {
-  accessToken: SF_TOKEN,
+  accessToken: loadToken(),
   instanceUrl: SF_INSTANCE,
 };
 
@@ -325,6 +341,7 @@ function handleUpdateToken(req, res) {
     }
 
     tokenCache.accessToken = newToken;
+    saveToken(newToken);
     console.log('  ✅  SF token updated via /admin at', new Date().toISOString());
 
     res.writeHead(200, { 'Content-Type': 'application/json' });
