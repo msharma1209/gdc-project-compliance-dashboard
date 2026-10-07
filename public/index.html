@@ -582,12 +582,7 @@ function hasUpcomingForecastAdoption(p) {
 }
 // Helper: is a milestone "billable" — either Include_In_Financials checked OR RecordType = Billing
 function isBillableMilestone(m) {
-  // RecordType = Billing is the primary signal
-  var rt = m.RecordType && m.RecordType.Name;
-  if (rt && rt.toLowerCase() === 'billing') return true;
-  // Include_In_Financials is a secondary signal
-  if (m.pse__Include_In_Financials__c) return true;
-  return false;
+  return !!m.pse__Include_In_Financials__c;
 }
 // Helper: does the project have a billable milestone due within 30 days?
 function hasBillableMilestoneDueSoon(p) {
