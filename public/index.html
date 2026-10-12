@@ -749,7 +749,7 @@ function fetchLiveData() {
       if(data&&data[0]&&data[0].errorCode==='INVALID_SESSION_ID'){
         throw new Error('TOKEN_EXPIRED');
       }
-      if(records.length===0) throw new Error('Empty result');
+      // Note: empty records is valid (DM may have no active projects) — do NOT throw here
       hideTokenBanner();
       btn.classList.remove('loading'); clearEl(btn); btn.textContent='↺ Refresh';
       // ✅ Save to localStorage so it becomes the fallback snapshot
