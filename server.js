@@ -711,6 +711,14 @@ var server = http.createServer(function (req, res) {
   } else if (reqPath === '/admin') {
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' });
     res.end(ADMIN_HTML);
+  } else if (reqPath === '/canvas') {
+    // Serve canvas.html explicitly (no extension in URL)
+    var canvasPath = path.join(PUBLIC_DIR, 'canvas.html');
+    fs.stat(canvasPath, function(err, stat) {
+      if (err || !stat.isFile()) { res.writeHead(404); res.end('Not found'); return; }
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' });
+      fs.createReadStream(canvasPath).pipe(res);
+    });
   } else {
     handleStatic(reqPath, res);
   }

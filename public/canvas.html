@@ -8,33 +8,32 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f4ff;min-height:100vh;padding:24px;}
-.header{display:flex;align-items:center;gap:16px;margin-bottom:24px;flex-wrap:wrap;}
-.header h1{font-size:1.2rem;font-weight:700;color:#0a1f44;}
-.header a{font-size:0.82rem;color:#0176d3;text-decoration:none;}
-.header a:hover{text-decoration:underline;}
+.hdr{display:flex;align-items:center;gap:16px;margin-bottom:24px;flex-wrap:wrap;}
+.hdr h1{font-size:1.2rem;font-weight:700;color:#0a1f44;}
+.hdr a{font-size:0.82rem;color:#0176d3;text-decoration:none;}
+.hdr a:hover{text-decoration:underline;}
 .btn{display:inline-flex;align-items:center;gap:7px;padding:9px 20px;border-radius:24px;font-size:0.88rem;font-weight:700;cursor:pointer;border:none;transition:background 0.15s;}
 .btn-primary{background:#0176d3;color:#fff;}
 .btn-primary:hover{background:#0156a3;}
 .btn-primary:disabled{opacity:0.5;cursor:not-allowed;}
 .btn-copy{background:#16a34a;color:#fff;}
 .btn-copy:hover{background:#15803d;}
-.btn-copy.copied{background:#6366f1;}
-.actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+.actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:0;}
 #status{font-size:0.82rem;color:#64748b;font-style:italic;}
-.card{background:#fff;border-radius:16px;box-shadow:0 2px 12px rgba(30,80,160,0.08);padding:28px;margin-bottom:20px;}
+.card{background:#fff;border-radius:16px;box-shadow:0 2px 12px rgba(30,80,160,0.08);padding:24px;margin-bottom:18px;}
 #preview-wrap{display:none;}
-#preview{font-family:monospace;font-size:13px;line-height:1.7;color:#1e293b;white-space:pre;background:#fafafa;border:1px solid #e2e8f0;border-radius:12px;padding:24px;max-height:600px;overflow:auto;}
-.steps{display:flex;flex-direction:column;gap:12px;margin-top:16px;}
+#preview{font-family:'Courier New',monospace;font-size:12.5px;line-height:1.65;color:#1e293b;white-space:pre;background:#fafafa;border:1px solid #e2e8f0;border-radius:10px;padding:20px;max-height:60vh;overflow:auto;}
+.steps{display:flex;flex-direction:column;gap:10px;margin-top:14px;}
 .step{display:flex;gap:12px;align-items:flex-start;}
-.step-num{flex-shrink:0;width:28px;height:28px;border-radius:50%;background:#0176d3;color:#fff;font-size:0.78rem;font-weight:700;display:flex;align-items:center;justify-content:center;}
-.step-text{font-size:0.88rem;color:#334155;line-height:1.5;padding-top:4px;}
-.step-text b{color:#0a1f44;}
-kbd{display:inline-block;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:4px;padding:1px 6px;font-size:0.8rem;font-family:monospace;}
+.sn{flex-shrink:0;width:26px;height:26px;border-radius:50%;background:#0176d3;color:#fff;font-size:0.75rem;font-weight:700;display:flex;align-items:center;justify-content:center;}
+.st{font-size:0.86rem;color:#334155;line-height:1.5;padding-top:3px;}
+.st b{color:#0a1f44;}
+kbd{background:#f1f5f9;border:1px solid #cbd5e1;border-radius:4px;padding:1px 6px;font-size:0.78rem;font-family:monospace;}
 </style>
 </head>
 <body>
 
-<div class="header">
+<div class="hdr">
   <a href="/">&#8592; Back to Dashboard</a>
   <h1>&#128203; Slack Canvas Export</h1>
 </div>
@@ -43,97 +42,137 @@ kbd{display:inline-block;background:#f1f5f9;border:1px solid #cbd5e1;border-radi
   <div class="actions">
     <button class="btn btn-primary" id="gen-btn" onclick="generate()">&#9889; Generate Canvas from Live Data</button>
     <button class="btn btn-copy" id="copy-btn" onclick="copyCanvas()" style="display:none">&#128203; Copy to Clipboard</button>
-    <span id="status">Click Generate to fetch latest data from Salesforce.</span>
+    <span id="status">Click Generate to pull the latest data from Salesforce.</span>
   </div>
 </div>
 
 <div class="card" id="preview-wrap">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-    <div style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#64748b;">Canvas Preview</div>
-  </div>
+  <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#64748b;margin-bottom:12px;">Canvas Preview — copy this into Slack</div>
   <pre id="preview"></pre>
 </div>
 
 <div class="card">
-  <div style="font-size:0.82rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#64748b;margin-bottom:14px;">How to paste into Slack Canvas</div>
+  <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#64748b;margin-bottom:12px;">How to paste into Slack Canvas</div>
   <div class="steps">
-    <div class="step"><div class="step-num">1</div><div class="step-text">Click <b>Generate Canvas from Live Data</b> above to fetch fresh numbers from Salesforce.</div></div>
-    <div class="step"><div class="step-num">2</div><div class="step-text">Click <b>Copy to Clipboard</b>.</div></div>
-    <div class="step"><div class="step-num">3</div><div class="step-text">Open your Slack canvas. Click inside the canvas body, press <kbd>Ctrl+A</kbd> to select all existing content, then <kbd>Delete</kbd> to clear it.</div></div>
-    <div class="step"><div class="step-num">4</div><div class="step-text">Press <kbd>Ctrl+V</kbd> to paste. Slack renders headings, bullets and tables automatically.</div></div>
+    <div class="step"><div class="sn">1</div><div class="st">Click <b>Generate Canvas from Live Data</b> above.</div></div>
+    <div class="step"><div class="sn">2</div><div class="st">Click <b>Copy to Clipboard</b>.</div></div>
+    <div class="step"><div class="sn">3</div><div class="st">Open your Slack canvas &#8594; click inside it &#8594; press <kbd>Ctrl+A</kbd> to select all existing content &#8594; <kbd>Delete</kbd> to clear.</div></div>
+    <div class="step"><div class="sn">4</div><div class="st">Press <kbd>Ctrl+V</kbd> to paste. Slack renders headings and bullets automatically.</div></div>
   </div>
 </div>
 
 <script>
-var canvasText = '';
+// ── Exact same helpers as index.html ─────────────────────────────────────────
+var TODAY = new Date();
+TODAY.setHours(12,0,0,0);
 
-function setStatus(msg, color) {
-  var el = document.getElementById('status');
-  el.textContent = msg;
-  el.style.color = color || '#64748b';
+function parseDate(str) {
+  if (!str) return null;
+  var p = str.split('-'); if (p.length !== 3) return null;
+  return new Date(Date.UTC(+p[0], +p[1]-1, +p[2], 12, 0, 0));
+}
+function daysDiff(d1, d2) { return Math.round((d1.getTime()-d2.getTime())/86400000); }
+
+function normaliseProjects(records) {
+  records.forEach(function(p) {
+    var srRecs = p.Status_Reports__r && p.Status_Reports__r.records;
+    p._lastStatusReport = (srRecs && srRecs.length > 0) ? srRecs[0].PSA_PM_Status_Report_Week__c : null;
+    var csRecs = p.Customer_Surveys__r && p.Customer_Surveys__r.records;
+    p._lastCSAT = (csRecs && csRecs.length > 0) ? csRecs[0].psa_pm_Survey_Sent_Date__c : null;
+  });
+  return records;
 }
 
-function generate() {
-  var btn = document.getElementById('gen-btn');
-  btn.disabled = true;
-  setStatus('Fetching live data from Salesforce...', '#0176d3');
-
-  fetch('/api/canvas-data')
-    .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
-    .then(function(d){
-      if(d.error) throw new Error(d.error);
-      canvasText = buildCanvas(d);
-      document.getElementById('preview').textContent = canvasText;
-      document.getElementById('preview-wrap').style.display = 'block';
-      document.getElementById('copy-btn').style.display = 'inline-flex';
-      btn.disabled = false;
-      setStatus('Generated from live Salesforce data as of ' + d.date + '. Click Copy to paste into Slack.', '#16a34a');
-    })
-    .catch(function(e){
-      btn.disabled = false;
-      setStatus('Error: ' + e.message + ' — make sure the SF token is set at /admin.', '#dc2626');
-    });
+function isInternal(p) {
+  var badStages = ['completed','cancelled','canceled','on hold','closed','delivery complete'];
+  if (badStages.indexOf((p.pse__Stage__c||'').toLowerCase()) !== -1) return true;
+  var prac = (p.pse__Practice__r && p.pse__Practice__r.Name) ? p.pse__Practice__r.Name.toLowerCase() : '';
+  if (prac === 'internal') return true;
+  var cat = (p.psa_pm_Project_Category__c||'').toLowerCase();
+  return cat === 'productive non - billable' || cat === 'internal';
 }
 
-function copyCanvas() {
-  if(!canvasText) return;
-  var btn = document.getElementById('copy-btn');
-  navigator.clipboard.writeText(canvasText).then(function(){
-    btn.classList.add('copied');
-    btn.textContent = 'Copied!';
-    setTimeout(function(){ btn.classList.remove('copied'); btn.textContent = 'Copy to Clipboard'; }, 2500);
-  }).catch(function(){
-    // Fallback for older browsers
-    var ta = document.createElement('textarea');
-    ta.value = canvasText;
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand('copy');
-    document.body.removeChild(ta);
-    btn.textContent = 'Copied!';
-    setTimeout(function(){ btn.textContent = 'Copy to Clipboard'; }, 2500);
+function hasRecentTimecard(p) {
+  if (!p.psa_tm_Last_Time_Entry_Date__c) return false;
+  var d = parseDate(p.psa_tm_Last_Time_Entry_Date__c);
+  return d && daysDiff(TODAY, d) <= 90;
+}
+
+function hasMissingAdoptionEvent(p) {
+  if (p.PSA_Adoption_Event_Not_Required_Reason__c) return false;
+  var aes = p.Adoption_Events__r && p.Adoption_Events__r.records;
+  return !aes || aes.length === 0;
+}
+
+function hasUpcomingForecastAdoption(p) {
+  var events = p.Adoption_Events__r && p.Adoption_Events__r.records;
+  if (!events || events.length === 0) return false;
+  return events.some(function(e) {
+    var st = (e.PSA_PM_Adoption_Event_Status__c||'').toLowerCase();
+    return st === 'forecast' || st === 'forecasted';
   });
 }
 
-function bar(pct) {
-  var filled = Math.round(pct / 10);
-  var empty  = 10 - filled;
-  var b = '';
-  for(var i=0;i<filled;i++) b += '█';
-  for(var j=0;j<empty;j++)  b += '░';
-  return b + ' ' + pct + '%';
+// ── KPI definitions (mirrors index.html exactly) ─────────────────────────────
+var KPI_DEFS = [
+  { id:'no_status',        label:'Status Updated',          icon:'📋',
+    match: function(p){ return !isInternal(p) && !p.pse__Project_Status__c; } },
+  { id:'missing_reports',  label:'Status Reports Filed',    icon:'📄',
+    match: function(p){
+      if(isInternal(p)) return false;
+      if(!p._lastStatusReport) return true;
+      var d=parseDate(p._lastStatusReport); return d && daysDiff(TODAY,d)>14;
+    }},
+  { id:'red_status',       label:'Not Red Status',          icon:'🔴',
+    match: function(p){ return !isInternal(p)&&(p.pse__Project_Status__c==='Red'||p.psa_Overall_Project_Status_Trend__c==='Red'); }},
+  { id:'past_end',         label:'Within End Date',         icon:'📅',
+    match: function(p){ var d=parseDate(p.pse__End_Date__c); return !isInternal(p)&&d&&d<TODAY; }},
+  { id:'low_margin',       label:'Healthy Margin (>=50%)',  icon:'💰',
+    match: function(p){ return !isInternal(p)&&p.PSA_PM_Margin_Percent__c!=null&&p.PSA_PM_Margin_Percent__c<50; }},
+  { id:'timecard',         label:'Timecard Up to Date',     icon:'🕐',
+    match: function(p){
+      if(isInternal(p)) return false;
+      if(!p.psa_tm_Last_Time_Entry_Date__c) return true;
+      var d=parseDate(p.psa_tm_Last_Time_Entry_Date__c); return d&&daysDiff(TODAY,d)>30;
+    }},
+  { id:'zero_hours',       label:'Planned Hours Entered',   icon:'⏱️',
+    match: function(p){ return !isInternal(p)&&(!p.pse__Planned_Hours__c||p.pse__Planned_Hours__c===0); }},
+  { id:'over_budget',      label:'Hours Within Budget',     icon:'⚠️',
+    match: function(p){ return !isInternal(p)&&p.PSA_PM_Total_Billable_Hours_Remaining__c!=null&&p.PSA_PM_Total_Billable_Hours_Remaining__c<0; }},
+  { id:'missing_csat',     label:'CSAT Survey Sent',        icon:'⭐',
+    match: function(p){
+      if(isInternal(p)) return false;
+      if(!p._lastCSAT) return true;
+      var d=parseDate(p._lastCSAT); return !d || daysDiff(TODAY,d)>90;
+    }},
+  { id:'adoption_missing', label:'Adoption Events Covered', icon:'🎯',
+    match: function(p){ return !isInternal(p)&&hasMissingAdoptionEvent(p); }}
+];
+
+// ── Canvas builder ─────────────────────────────────────────────────────────
+var canvasText = '';
+
+function padR(s, n){ s=String(s); while(s.length<n) s+=' '; return s.slice(0,n+2); }
+function padL(s, n){ s=String(s); while(s.length<n) s=' '+s; return s; }
+function bar(pct){
+  var f=Math.round(pct/10), e=10-f, b='';
+  for(var i=0;i<f;i++) b+='█';
+  for(var j=0;j<e;j++) b+='░';
+  return b+' '+pct+'%';
 }
 
-function padR(s, n){ s=String(s); while(s.length<n) s+=' '; return s.slice(0,n); }
-function padL(s, n){ s=String(s); while(s.length<n) s=' '+s; return s; }
-
-function buildCanvas(d) {
-  var L = [];
-  var SEP = '━'.repeat(46);
+function buildCanvas(projects) {
+  var active = projects.filter(function(p){ return !isInternal(p) && hasRecentTimecard(p); });
+  var total  = active.length;
+  var L      = [];
+  var SEP    = '━'.repeat(50);
+  var now    = new Date();
+  var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var dateStr = now.getDate() + ' ' + months[now.getMonth()] + ' ' + now.getFullYear();
 
   // Title
   L.push('GDC Informatica Practice — Project Compliance Dashboard');
-  L.push('📅 ' + d.date);
+  L.push('📅 ' + dateStr);
   L.push('');
 
   // Summary
@@ -141,20 +180,26 @@ function buildCanvas(d) {
   L.push('📊  SUMMARY');
   L.push(SEP);
   L.push('');
-  L.push('Total Active Projects         : ' + d.total);
-  L.push('Projects Ending by Oct 2026   : ' + d.endingOct);
-  L.push('Projects At Risk / Red Status : ' + d.reds.length);
+  var reds = active.filter(function(p){ return p.pse__Project_Status__c==='Red'||p.psa_pm_At_Risk__c; });
+  var oct31= new Date(Date.UTC(2026,9,31,12,0,0));
+  var endingOct = active.filter(function(p){ var d=parseDate(p.pse__End_Date__c); return d&&d>=TODAY&&d<=oct31; }).length;
+  L.push('Total Active Projects            : ' + total);
+  L.push('Projects Ending by Oct 2026      : ' + endingOct);
+  L.push('Projects At Risk / Red Status    : ' + reds.length);
   L.push('');
 
-  // KPI Compliance
+  // KPI Scorecard
   L.push(SEP);
-  L.push('✅  COMPLIANCE SCORECARD  (out of ' + d.total + ' active projects)');
+  L.push('✅  COMPLIANCE SCORECARD  (' + total + ' active projects)');
   L.push(SEP);
   L.push('');
-  L.push(padR('KPI', 34) + padR('Compliant', 12) + 'Progress');
-  L.push('─'.repeat(70));
-  d.kpis.forEach(function(k){
-    L.push(padR(k.icon + ' ' + k.label, 34) + padR(k.compliant + '/' + k.total, 12) + bar(k.pct));
+  L.push(padR('KPI',34) + padR('Compliant',14) + 'Progress');
+  L.push('─'.repeat(72));
+  KPI_DEFS.forEach(function(k){
+    var flagged  = active.filter(k.match).length;
+    var compliant= total - flagged;
+    var pct      = total ? Math.round((compliant/total)*100) : 0;
+    L.push(padR(k.icon+' '+k.label,34) + padR(compliant+'/'+total,14) + bar(pct));
   });
   L.push('');
 
@@ -163,11 +208,14 @@ function buildCanvas(d) {
   L.push('🏢  PROJECTS BY PRACTICE');
   L.push(SEP);
   L.push('');
-  var pracList = Object.keys(d.practices).sort(function(a,b){ return d.practices[b]-d.practices[a]; });
-  pracList.forEach(function(p){
-    var cnt = d.practices[p];
-    var pct = d.total ? Math.round((cnt/d.total)*100) : 0;
-    L.push('  • ' + padR(p, 32) + padL(cnt + ' projects', 12) + '  (' + pct + '%)');
+  var pracs = {};
+  active.forEach(function(p){
+    var prac=(p.pse__Practice__r&&p.pse__Practice__r.Name)||'Unassigned';
+    pracs[prac]=(pracs[prac]||0)+1;
+  });
+  Object.keys(pracs).sort(function(a,b){return pracs[b]-pracs[a];}).forEach(function(prac){
+    var cnt=pracs[prac], pct=total?Math.round((cnt/total)*100):0;
+    L.push('  • '+padR(prac,34)+padL(cnt+' projects',12)+'  ('+pct+'%)');
   });
   L.push('');
 
@@ -176,23 +224,28 @@ function buildCanvas(d) {
   L.push('👤  PROJECTS BY DELIVERY MANAGER');
   L.push(SEP);
   L.push('');
-  var dmList = Object.keys(d.dms).sort(function(a,b){ return d.dms[b]-d.dms[a]; });
-  dmList.forEach(function(dm){
-    L.push('  • ' + padR(dm, 32) + padL(d.dms[dm] + ' projects', 12));
+  var dms = {};
+  active.forEach(function(p){
+    var dm=(p.pse__Project_Manager__r&&p.pse__Project_Manager__r.Name)||'Unassigned';
+    dms[dm]=(dms[dm]||0)+1;
+  });
+  Object.keys(dms).sort(function(a,b){return dms[b]-dms[a];}).forEach(function(dm){
+    L.push('  • '+padR(dm,34)+padL(dms[dm]+' projects',12));
   });
   L.push('');
 
   // Red / At-risk
-  if(d.reds.length > 0) {
+  if(reds.length>0){
     L.push(SEP);
-    L.push('🚨  RED / AT-RISK PROJECTS  (' + d.reds.length + ')');
+    L.push('🚨  RED / AT-RISK PROJECTS  ('+reds.length+')');
     L.push(SEP);
     L.push('');
-    d.reds.forEach(function(p){
-      var flags = [];
-      if(p.status === 'Red') flags.push('Red Status');
-      if(p.atRisk)           flags.push('At Risk');
-      L.push('  • ' + p.name + (p.account ? ' (' + p.account + ')' : '') + ' — ' + flags.join(', '));
+    reds.forEach(function(p){
+      var flags=[];
+      if(p.pse__Project_Status__c==='Red') flags.push('Red Status');
+      if(p.psa_pm_At_Risk__c)              flags.push('At Risk');
+      var acct=(p.pse__Account__r&&p.pse__Account__r.Name)?'  ('+p.pse__Account__r.Name+')':'';
+      L.push('  • '+(p.Name||'')+(acct)+' — '+flags.join(', '));
     });
     L.push('');
   }
@@ -200,10 +253,57 @@ function buildCanvas(d) {
   // Footer
   L.push(SEP);
   L.push('🔗 Live Dashboard: https://gdc-project-compliance-dashboard.onrender.com');
-  L.push('📌 Data sourced from Salesforce PSA · Generated ' + d.date);
+  L.push('📌 Data from Salesforce PSA · Generated '+dateStr);
   L.push(SEP);
 
   return L.join('\n');
+}
+
+// ── Fetch + generate ────────────────────────────────────────────────────────
+function setStatus(msg, color){
+  var el=document.getElementById('status');
+  el.textContent=msg; el.style.color=color||'#64748b';
+}
+
+function generate(){
+  var btn=document.getElementById('gen-btn');
+  btn.disabled=true;
+  setStatus('Fetching live data from Salesforce...','#0176d3');
+
+  fetch('/api/projects')
+    .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+    .then(function(data){
+      if(data.error) throw new Error(data.error);
+      var records = normaliseProjects(data.records||[]);
+      if(!records.length) throw new Error('0 projects returned — is the SF token set? Visit /admin.');
+      canvasText = buildCanvas(records);
+      document.getElementById('preview').textContent = canvasText;
+      document.getElementById('preview-wrap').style.display='block';
+      document.getElementById('copy-btn').style.display='inline-flex';
+      btn.disabled=false;
+      setStatus('Canvas ready with '+records.length+' projects from Salesforce. Click Copy to paste into Slack.','#16a34a');
+    })
+    .catch(function(e){
+      btn.disabled=false;
+      setStatus('Error: '+e.message,'#dc2626');
+    });
+}
+
+function copyCanvas(){
+  if(!canvasText) return;
+  var btn=document.getElementById('copy-btn');
+  function done(){ btn.textContent='✅ Copied!'; setTimeout(function(){ btn.textContent='📋 Copy to Clipboard'; },2500); }
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(canvasText).then(done).catch(function(){
+      fallbackCopy(); done();
+    });
+  } else { fallbackCopy(); done(); }
+}
+function fallbackCopy(){
+  var ta=document.createElement('textarea');
+  ta.value=canvasText; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.select();
+  document.execCommand('copy'); document.body.removeChild(ta);
 }
 </script>
 </body>
