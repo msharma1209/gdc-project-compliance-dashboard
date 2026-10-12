@@ -17,6 +17,7 @@ const http        = require('http');
 const https       = require('https');
 const fs          = require('fs');
 const path        = require('path');
+const crypto      = require('crypto');
 const { execFile } = require('child_process');
 
 // ── Load .env (local dev only) ────────────────────────────────────────────────
@@ -34,11 +35,43 @@ const { execFile } = require('child_process');
   });
 })();
 
-var PORT           = Number(process.env.PORT) || 3500;
-var SF_INSTANCE    = process.env.SF_INSTANCE    || 'https://infa.my.salesforce.com';
-var SF_TOKEN       = process.env.SF_TOKEN       || '';
-var ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'gdc-admin-2024';
-var PUBLIC_DIR     = path.join(__dirname, 'public');
+var PORT            = Number(process.env.PORT) || 3500;
+var SF_INSTANCE     = process.env.SF_INSTANCE    || 'https://infa.my.salesforce.com';
+var SF_TOKEN        = process.env.SF_TOKEN       || '';
+var ADMIN_PASSWORD  = process.env.ADMIN_PASSWORD || 'gdc-admin-2024';
+var CANVAS_PASSWORD = process.env.CANVAS_PASSWORD || '';   // set in Render env; if blank canvas is open
+var PUBLIC_DIR      = path.join(__dirname, 'public');
+
+// ── Canvas session store (in-memory, token → expiry ms) ──────────────────────
+var canvasSessions = {};   // { token: expiryTimestamp }
+var CANVAS_SESSION_TTL = 24 * 60 * 60 * 1000; // 24 hours
+
+function generateSessionToken() {
+  return crypto.randomBytes(32).toString('hex');
+}
+
+function isValidCanvasSession(cookieHeader) {
+  if (!CANVAS_PASSWORD) return true;  // no password set → open access
+  if (!cookieHeader) return false;
+  // Parse canvas_session cookie
+  var match = cookieHeader.split(';').map(function(s){ return s.trim(); })
+    .find(function(s){ return s.startsWith('canvas_session='); });
+  if (!match) return false;
+  var token = match.slice('canvas_session='.length);
+  var expiry = canvasSessions[token];
+  if (!expiry || Date.now() > expiry) {
+    delete canvasSessions[token];
+    return false;
+  }
+  return true;
+}
+
+function parseCookieToken(cookieHeader) {
+  if (!cookieHeader) return null;
+  var match = cookieHeader.split(';').map(function(s){ return s.trim(); })
+    .find(function(s){ return s.startsWith('canvas_session='); });
+  return match ? match.slice('canvas_session='.length) : null;
+}
 
 // ── In-memory token store ─────────────────────────────────────────────────────
 var tokenCache = {
@@ -513,6 +546,124 @@ function handleDebugMilestones(res) {
   });
 }
 
+// ── Canvas login page ─────────────────────────────────────────────────────────
+var CANVAS_LOGIN_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GDC Canvas – Access Required</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+       background:#0f1117;color:#e2e8f0;min-height:100vh;display:flex;
+       align-items:center;justify-content:center;padding:24px}
+  .card{background:#1a1d2e;border:1px solid #2d3148;border-radius:16px;
+        padding:40px;width:100%;max-width:440px;box-shadow:0 8px 32px rgba(0,0,0,.4)}
+  .logo{font-size:2rem;margin-bottom:12px;text-align:center}
+  h1{font-size:1.25rem;font-weight:700;margin-bottom:6px;color:#fff;text-align:center}
+  p{font-size:.85rem;color:#94a3b8;margin-bottom:28px;line-height:1.5;text-align:center}
+  label{display:block;font-size:.8rem;font-weight:600;color:#94a3b8;
+        text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+  input{width:100%;background:#0f1117;border:1px solid #2d3148;
+        border-radius:8px;padding:11px 14px;color:#e2e8f0;
+        font-size:.95rem;outline:none;transition:border .2s;letter-spacing:.05em}
+  input:focus{border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.15)}
+  .field{margin-bottom:20px}
+  button{width:100%;padding:13px;background:#6366f1;color:#fff;border:none;
+         border-radius:8px;font-size:.95rem;font-weight:600;cursor:pointer;
+         transition:background .2s}
+  button:hover{background:#4f46e5}
+  #msg{margin-top:16px;padding:11px 16px;border-radius:8px;font-size:.88rem;
+       display:none;text-align:center}
+  .err{background:#450a0a;color:#fca5a5;border:1px solid #7f1d1d}
+  a{color:#6366f1;text-decoration:none;font-size:.82rem}
+  a:hover{text-decoration:underline}
+  .back{text-align:center;margin-top:20px}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">📋</div>
+  <h1>Canvas Access</h1>
+  <p>This page is restricted.<br>Enter the canvas password to continue.</p>
+  <div class="field">
+    <label>Canvas Password</label>
+    <input type="password" id="pwd" placeholder="Enter password" autocomplete="current-password" autofocus>
+  </div>
+  <button onclick="login()">Unlock Canvas</button>
+  <div id="msg" class="err"></div>
+  <div class="back"><a href="/">← Back to Dashboard</a></div>
+</div>
+<script>
+function login() {
+  var pwd = document.getElementById('pwd').value.trim();
+  var msg = document.getElementById('msg');
+  msg.style.display = 'none';
+  if (!pwd) { msg.textContent = 'Please enter the password.'; msg.style.display = 'block'; return; }
+  fetch('/api/canvas-login', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({password: pwd})
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(data) {
+    if (data.ok) {
+      window.location = '/canvas';
+    } else {
+      msg.textContent = '❌ ' + (data.error || 'Incorrect password.');
+      msg.style.display = 'block';
+    }
+  })
+  .catch(function(e){ msg.textContent = 'Network error: ' + e.message; msg.style.display = 'block'; });
+}
+document.addEventListener('keydown', function(e){ if (e.key === 'Enter') login(); });
+</script>
+</body>
+</html>`;
+
+// ── /api/canvas-login  POST ───────────────────────────────────────────────────
+function handleCanvasLogin(req, res) {
+  var chunks = [];
+  req.on('data', function(c){ chunks.push(c); });
+  req.on('end', function() {
+    var body;
+    try { body = JSON.parse(Buffer.concat(chunks).toString('utf8')); }
+    catch(e) { res.writeHead(400,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:'Invalid JSON'})); return; }
+
+    if (!body.password || body.password !== CANVAS_PASSWORD) {
+      res.writeHead(403, {'Content-Type':'application/json'});
+      res.end(JSON.stringify({ok:false, error:'Incorrect password.'}));
+      return;
+    }
+
+    var token  = generateSessionToken();
+    var expiry = Date.now() + CANVAS_SESSION_TTL;
+    canvasSessions[token] = expiry;
+
+    // Clean up expired sessions occasionally
+    if (Object.keys(canvasSessions).length > 500) {
+      var now = Date.now();
+      Object.keys(canvasSessions).forEach(function(k){ if (canvasSessions[k] < now) delete canvasSessions[k]; });
+    }
+
+    var cookieVal = 'canvas_session=' + token + '; Path=/canvas; HttpOnly; SameSite=Strict; Max-Age=' + Math.floor(CANVAS_SESSION_TTL/1000);
+    res.writeHead(200, {'Content-Type':'application/json', 'Set-Cookie': cookieVal});
+    res.end(JSON.stringify({ok:true}));
+  });
+}
+
+// ── /api/canvas-logout  GET ───────────────────────────────────────────────────
+function handleCanvasLogout(req, res) {
+  var token = parseCookieToken(req.headers.cookie);
+  if (token) delete canvasSessions[token];
+  res.writeHead(302, {
+    'Set-Cookie': 'canvas_session=; Path=/canvas; HttpOnly; Max-Age=0',
+    'Location': '/canvas-login'
+  });
+  res.end();
+}
+
 // ── /api/canvas-data — compute all KPI numbers server-side for canvas export ─
 function handleCanvasData(res) {
   if (!tokenCache.accessToken) {
@@ -685,6 +836,8 @@ var server = http.createServer(function (req, res) {
   if (req.method === 'POST') {
     if (reqPath === '/api/update-token') {
       handleUpdateToken(req, res);
+    } else if (reqPath === '/api/canvas-login') {
+      handleCanvasLogin(req, res);
     } else {
       res.writeHead(405); res.end('Method Not Allowed');
     }
@@ -708,11 +861,23 @@ var server = http.createServer(function (req, res) {
     handleRecordTypes(res);
   } else if (reqPath === '/api/lookup-dms') {
     handleLookupDMs(res);
+  } else if (reqPath === '/api/canvas-logout') {
+    handleCanvasLogout(req, res);
   } else if (reqPath === '/admin') {
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' });
     res.end(ADMIN_HTML);
+  } else if (reqPath === '/canvas-login') {
+    // Serve the canvas login page (already logged in → redirect to canvas)
+    if (isValidCanvasSession(req.headers.cookie)) {
+      res.writeHead(302, { 'Location': '/canvas' }); res.end(); return;
+    }
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' });
+    res.end(CANVAS_LOGIN_HTML);
   } else if (reqPath === '/canvas') {
-    // Serve canvas.html explicitly (no extension in URL)
+    // Gate: if CANVAS_PASSWORD is set, require a valid session cookie
+    if (!isValidCanvasSession(req.headers.cookie)) {
+      res.writeHead(302, { 'Location': '/canvas-login' }); res.end(); return;
+    }
     var canvasPath = path.join(PUBLIC_DIR, 'canvas.html');
     fs.stat(canvasPath, function(err, stat) {
       if (err || !stat.isFile()) { res.writeHead(404); res.end('Not found'); return; }
