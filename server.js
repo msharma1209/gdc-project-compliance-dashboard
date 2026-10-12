@@ -372,6 +372,53 @@ function handleLookupDMs(res) {
   fetchSOQL(dmSoql, tokenCache.accessToken, tokenCache.instanceUrl, done);
 }
 
+// ── /api/milestones — top-level query on pse__Milestone__c (RecordType works here) ──
+// Returns a map of { projectId: [{ id, name, targetDate }] } for Billing milestones due in 30d
+function handleMilestones(res) {
+  if (!tokenCache.accessToken) {
+    res.writeHead(503, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'No SF token set.' }));
+    return;
+  }
+  // Top-level query — RecordType.Name IS supported here (unlike sub-queries)
+  // Look 30 days ahead from today on the server side too
+  var today = new Date();
+  var in30  = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
+  function pad(n) { return n < 10 ? '0' + n : '' + n; }
+  function fmtDate(d) { return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()); }
+
+  var soql = "SELECT Id, Name, pse__Target_Date__c, pse__Project__c " +
+    "FROM pse__Milestone__c " +
+    "WHERE RecordType.Name = 'Billing' " +
+    "AND pse__Target_Date__c >= " + fmtDate(today) + " " +
+    "AND pse__Target_Date__c <= " + fmtDate(in30) + " " +
+    "AND pse__Project__r.pse__Stage__c NOT IN ('Completed','Cancelled','Canceled','On Hold','Closed','Delivery Complete') " +
+    "ORDER BY pse__Target_Date__c ASC LIMIT 500";
+
+  fetchSOQL(soql, tokenCache.accessToken, tokenCache.instanceUrl, function(err, data) {
+    if (err) {
+      if (err.message === 'INVALID_SESSION_ID') {
+        res.writeHead(401, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'INVALID_SESSION_ID' }));
+        return;
+      }
+      res.writeHead(502, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: err.message }));
+      return;
+    }
+    // Build map: projectId → array of milestone stubs
+    var map = {};
+    (data.records || []).forEach(function(m) {
+      var pid = m.pse__Project__c;
+      if (!pid) return;
+      if (!map[pid]) map[pid] = [];
+      map[pid].push({ id: m.Id, name: m.Name, date: m.pse__Target_Date__c });
+    });
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+    res.end(JSON.stringify(map));
+  });
+}
+
 // ── /api/record-types — fetch RecordType IDs for pse__Milestone__c ──────────
 function handleRecordTypes(res) {
   if (!tokenCache.accessToken) {
@@ -446,6 +493,8 @@ var server = http.createServer(function (req, res) {
 
   if (reqPath === '/api/projects') {
     handleApiProjects(res);
+  } else if (reqPath === '/api/milestones') {
+    handleMilestones(res);
   } else if (reqPath === '/api/record-types') {
     handleRecordTypes(res);
   } else if (reqPath === '/api/lookup-dms') {
