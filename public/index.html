@@ -76,7 +76,7 @@
   .badge-bundled { background: #fef9c3; color: #a16207;       border: 1px solid rgba(217,119,6,0.3); }
 
   /* ── DM Filter Bar ── */
-  #dm-filter-bar { display: flex; gap: 12px; padding: 10px 24px; background: rgba(255,255,255,0.7); backdrop-filter: blur(8px); border-bottom: 1px solid rgba(200,215,240,0.4); align-items: center; flex-wrap: wrap; }
+  #dm-filter-bar { display: flex; gap: 12px; padding: 10px 24px; background: rgba(255,255,255,0.7); backdrop-filter: blur(8px); border-bottom: 1px solid rgba(200,215,240,0.4); align-items: center; flex-wrap: wrap; position: relative; z-index: 150; }
   #dm-filter-bar label { font-size: 0.78rem; font-weight: 600; color: var(--muted); white-space: nowrap; }
   /* Trigger button */
   #dm-trigger {
@@ -102,7 +102,7 @@
   .dm-chip-tag .dm-chip-x:hover { color: var(--red); }
   /* Dropdown panel */
   #dm-panel {
-    display: none; position: absolute; z-index: 300;
+    display: none; position: absolute; z-index: 9999;
     background: #ffffff; border: 1px solid var(--border); border-radius: 16px;
     box-shadow: 0 8px 32px rgba(30,80,160,0.14); padding: 10px 0;
     min-width: 240px; max-height: 360px; overflow-y: auto;
