@@ -581,11 +581,19 @@ function hasUpcomingForecastAdoption(p) {
     return status === 'forecast' || status === 'forecasted';
   });
 }
+// Is this milestone a "Billing" type?
+// RecordType name varies per org — check "billing" anywhere in name (case-insensitive)
+// Secondary signal: pse__Include_In_Financials__c
+function isBillingMilestone(m) {
+  var rt = (m.recordTypeName || '').toLowerCase();
+  if (rt) return rt.indexOf('billing') !== -1;
+  return m.includeInFinancials === true;
+}
+
 // Helper: does this project have a Billing milestone due in the next 30 days?
-// Uses the flat list from /api/milestones (top-level SOQL, RecordType.Name = 'Billing')
 function hasBillableMilestoneDueSoon(p) {
   return state.billingMilestones.some(function(m) {
-    return m.projectId === p.Id;
+    return m.projectId === p.Id && isBillingMilestone(m);
   });
 }
 // Helper: does the project have a CSAT survey in the current calendar year?
@@ -681,7 +689,8 @@ var KPI_DEFS = [
       projects.forEach(function(p) { projectIds[p.Id] = true; });
       var counts = {};
       state.billingMilestones.forEach(function(m) {
-        if (!projectIds[m.projectId]) return; // only milestones for filtered projects
+        if (!projectIds[m.projectId]) return;
+        if (!isBillingMilestone(m)) return;
         var prac = m.practice || 'Unassigned';
         counts[prac] = (counts[prac] || 0) + 1;
       });
@@ -1674,7 +1683,12 @@ function init(){
       .then(function(r){ return r.ok ? r.json() : []; })
       .then(function(list){
         state.billingMilestones = Array.isArray(list) ? list : [];
-        console.log('Billing milestones loaded:', state.billingMilestones.length, 'records');
+        // Log all distinct RecordType names seen — helps diagnose filtering
+        var rtNames = {};
+        state.billingMilestones.forEach(function(m){ if(m.recordTypeName) rtNames[m.recordTypeName]=true; });
+        console.log('Milestones loaded (total due in 30d):', state.billingMilestones.length,
+          '| RecordType names found:', Object.keys(rtNames).join(', ') || 'none',
+          '| Billing (matched):', state.billingMilestones.filter(isBillingMilestone).length);
       })
       .catch(function(e){ console.warn('Could not load billing milestones:', e.message); });
   }

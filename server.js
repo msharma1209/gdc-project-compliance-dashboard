@@ -387,15 +387,17 @@ function handleMilestones(res) {
   function pad(n) { return n < 10 ? '0' + n : '' + n; }
   function fmtDate(d) { return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()); }
 
-  // RecordType.Name = 'Billing', Status != Complete, TargetDate within 30 days
-  // Include project name + practice so client can group without cross-referencing
+  // Fetch ALL milestones due in next 30 days with RecordType.Name included in SELECT.
+  // Do NOT filter by RecordType.Name in WHERE — the exact name varies per org.
+  // Server returns RecordType.Name + pse__Include_In_Financials__c so the client
+  // can apply a "contains billing" check and see what's actually there.
   var soql =
     "SELECT Id, Name, pse__Status__c, pse__Target_Date__c, " +
+    "RecordType.Name, pse__Include_In_Financials__c, " +
     "pse__Project__c, pse__Project__r.Name, " +
     "pse__Project__r.pse__Practice__r.Name " +
     "FROM pse__Milestone__c " +
-    "WHERE RecordType.Name = 'Billing' " +
-    "AND pse__Status__c != 'Complete' " +
+    "WHERE pse__Status__c != 'Complete' " +
     "AND pse__Target_Date__c >= " + fmtDate(today) + " " +
     "AND pse__Target_Date__c <= " + fmtDate(in30) + " " +
     "AND pse__Project__r.pse__Stage__c NOT IN " +
@@ -414,18 +416,20 @@ function handleMilestones(res) {
       return;
     }
 
-    // Return flat list — each item has projectId, projectName, practice, milestoneName, date
+    // Return flat list — include recordTypeName so client can filter "contains billing"
     var records = (data.records || []).map(function(m) {
       return {
-        id:          m.Id,
-        name:        m.Name,
-        date:        m.pse__Target_Date__c,
-        status:      m.pse__Status__c,
-        projectId:   m.pse__Project__c,
-        projectName: m.pse__Project__r ? m.pse__Project__r.Name : null,
-        practice:    (m.pse__Project__r && m.pse__Project__r.pse__Practice__r)
-                       ? m.pse__Project__r.pse__Practice__r.Name
-                       : 'Unassigned'
+        id:                  m.Id,
+        name:                m.Name,
+        date:                m.pse__Target_Date__c,
+        status:              m.pse__Status__c,
+        recordTypeName:      m.RecordType ? m.RecordType.Name : null,
+        includeInFinancials: !!m.pse__Include_In_Financials__c,
+        projectId:           m.pse__Project__c,
+        projectName:         m.pse__Project__r ? m.pse__Project__r.Name : null,
+        practice:            (m.pse__Project__r && m.pse__Project__r.pse__Practice__r)
+                               ? m.pse__Project__r.pse__Practice__r.Name
+                               : 'Unassigned'
       };
     });
 
