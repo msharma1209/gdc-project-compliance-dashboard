@@ -523,6 +523,7 @@ var state = {
   activeDMs: {},   // map of dmId → true for selected; empty = all
   searchQuery: '', sortCol: null, sortDir: 'asc',
   dataSource: 'bundled',
+  billingRecordTypeIds: {},  // set of RecordTypeId strings that mean "Billing"
   charts: { doughnut: null, practice: null, billing: null, health: null, dm: null },
   detail: { projects: [], displayed: [], searchQuery: '', sortCol: null, sortDir: 'asc', kpi: null }
 };
@@ -580,8 +581,13 @@ function hasUpcomingForecastAdoption(p) {
     return status === 'forecast' || status === 'forecasted';
   });
 }
-// Helper: is a milestone "billable" — either Include_In_Financials checked OR RecordType = Billing
+// Helper: is a milestone "Billing" type?
+// Primary: check RecordTypeId against known Billing RT IDs fetched from /api/record-types
+// Fallback: pse__Include_In_Financials__c (used when RT IDs not yet loaded or not found)
 function isBillableMilestone(m) {
+  if (m.RecordTypeId && Object.keys(state.billingRecordTypeIds).length > 0) {
+    return !!state.billingRecordTypeIds[m.RecordTypeId];
+  }
   return !!m.pse__Include_In_Financials__c;
 }
 // Helper: does the project have a billable milestone due within 30 days?
@@ -1669,7 +1675,25 @@ function init(){
     document.getElementById('detail-row-count').textContent=state.detail.displayed.length+' project'+(state.detail.displayed.length!==1?'s':'');
   });
 
-  fetchLiveData().then(function(r){ loadData(r.source,r.records); });
+  // Fetch Billing RecordType IDs first, then load project data
+  // (record types rarely change — fetch once on init, no need to repeat)
+  fetch('/api/record-types')
+    .then(function(r){ return r.ok ? r.json() : []; })
+    .then(function(rts) {
+      // Keep any RecordType whose name contains "billing" (case-insensitive)
+      state.billingRecordTypeIds = {};
+      (rts || []).forEach(function(rt) {
+        if (rt.Name && rt.Name.toLowerCase().indexOf('billing') !== -1) {
+          state.billingRecordTypeIds[rt.Id] = true;
+        }
+      });
+      console.log('Billing RT IDs loaded:', Object.keys(state.billingRecordTypeIds));
+    })
+    .catch(function(e){ console.warn('Could not load record types:', e.message); })
+    .then(function(){
+      // Always load project data, even if RT fetch failed
+      return fetchLiveData().then(function(r){ loadData(r.source,r.records); });
+    });
 
   // Auto-refresh every 30 minutes to keep server awake + data fresh
   setInterval(function(){

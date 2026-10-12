@@ -87,7 +87,7 @@ var SOQL_SELECT = [
   'psa_pm_Project_Sub_Type__c, pse__Practice__r.Name, pse__Region__r.Name,',
   'pse__Billing_Type__c, PSA_PM_Margin_Percent__c,',
   '(SELECT Id, PSA_PM_Adoption_Event_Status__c, PSA_PM_Adoption_Event_Date__c, PSA_PM_Start_Date__c FROM Adoption_Events__r),',
-  '(SELECT Id, Name, pse__Target_Date__c, pse__Include_In_Financials__c FROM pse__Milestones__r ORDER BY pse__Target_Date__c ASC NULLS LAST LIMIT 50),',
+  '(SELECT Id, Name, pse__Target_Date__c, pse__Include_In_Financials__c, RecordTypeId FROM pse__Milestones__r ORDER BY pse__Target_Date__c ASC NULLS LAST LIMIT 50),',
   '(SELECT Id, psa_pm_Survey_Sent_Date__c, psa_pm_Survey_Response_Date__c FROM Customer_Surveys__r WHERE psa_pm_Survey_Sent_Date__c != null ORDER BY psa_pm_Survey_Sent_Date__c DESC LIMIT 1),',
   '(SELECT Id, PSA_PM_Status_Report_Week__c FROM Status_Reports__r ORDER BY PSA_PM_Status_Report_Week__c DESC LIMIT 1),',
   '(SELECT Id, pse__Resource__c, pse__Role__c FROM pse__Assignments__r WHERE pse__Role__c = \'Delivery Manager\')',
@@ -372,6 +372,25 @@ function handleLookupDMs(res) {
   fetchSOQL(dmSoql, tokenCache.accessToken, tokenCache.instanceUrl, done);
 }
 
+// ── /api/record-types — fetch RecordType IDs for pse__Milestone__c ──────────
+function handleRecordTypes(res) {
+  if (!tokenCache.accessToken) {
+    res.writeHead(503, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'No SF token set.' }));
+    return;
+  }
+  var soql = "SELECT Id, Name FROM RecordType WHERE SObjectType = 'pse__Milestone__c' ORDER BY Name";
+  fetchSOQL(soql, tokenCache.accessToken, tokenCache.instanceUrl, function(err, data) {
+    if (err) {
+      res.writeHead(502, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: err.message }));
+      return;
+    }
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+    res.end(JSON.stringify(data.records || []));
+  });
+}
+
 // ── Static file serving from public/ ─────────────────────────────────────────
 function handleStatic(reqPath, res) {
   if (reqPath === '/' || reqPath === '') reqPath = '/index.html';
@@ -427,6 +446,8 @@ var server = http.createServer(function (req, res) {
 
   if (reqPath === '/api/projects') {
     handleApiProjects(res);
+  } else if (reqPath === '/api/record-types') {
+    handleRecordTypes(res);
   } else if (reqPath === '/api/lookup-dms') {
     handleLookupDMs(res);
   } else if (reqPath === '/admin') {
