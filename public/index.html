@@ -523,7 +523,7 @@ var state = {
   activeDMs: {},   // map of dmId → true for selected; empty = all
   searchQuery: '', sortCol: null, sortDir: 'asc',
   dataSource: 'bundled',
-  billingMilestones: {},     // projectId → [{id,name,date}] from /api/milestones
+  billingMilestones: [],     // flat list of {id,name,date,projectId,projectName,practice} from /api/milestones
   charts: { doughnut: null, practice: null, billing: null, health: null, dm: null },
   detail: { projects: [], displayed: [], searchQuery: '', sortCol: null, sortDir: 'asc', kpi: null }
 };
@@ -581,22 +581,11 @@ function hasUpcomingForecastAdoption(p) {
     return status === 'forecast' || status === 'forecasted';
   });
 }
-// Helper: does the project have a Billing milestone due within 30 days?
-// Uses /api/milestones map (top-level SOQL with RecordType.Name = 'Billing')
-// Falls back to sub-query milestones + Include_In_Financials if map not loaded
+// Helper: does this project have a Billing milestone due in the next 30 days?
+// Uses the flat list from /api/milestones (top-level SOQL, RecordType.Name = 'Billing')
 function hasBillableMilestoneDueSoon(p) {
-  // Primary: use the dedicated billing milestones map
-  if (Object.keys(state.billingMilestones).length > 0) {
-    return !!(state.billingMilestones[p.Id] && state.billingMilestones[p.Id].length > 0);
-  }
-  // Fallback: scan sub-query milestones using Include_In_Financials
-  var ms = p.pse__Milestones__r && p.pse__Milestones__r.records;
-  if (!ms || ms.length === 0) return false;
-  var in30 = new Date(TODAY.getTime() + 30*24*60*60*1000);
-  return ms.some(function(m) {
-    if (!m.pse__Include_In_Financials__c) return false;
-    var d = parseDate(m.pse__Target_Date__c);
-    return d && d >= TODAY && d <= in30;
+  return state.billingMilestones.some(function(m) {
+    return m.projectId === p.Id;
   });
 }
 // Helper: does the project have a CSAT survey in the current calendar year?
@@ -682,13 +671,18 @@ var KPI_DEFS = [
     }
   },
   { id:'milestones',       label:'Milestones Due (30d)',     icon:'🏁', border:'red',
-    desc:'Billable milestones with target date in the next 30 days — broken down by Practice',
+    desc:'Billing milestones (RecordType=Billing, Status≠Complete) due in next 30 days — by Practice',
     match: function(p) { return !isInternal(p) && hasBillableMilestoneDueSoon(p); },
     breakdown: true,
     getBreakdown: function(projects) {
+      // Count milestones (not projects) per practice, from the dedicated flat list
+      // This is the authoritative source — RecordType=Billing filtered at SOQL level
+      var projectIds = {};
+      projects.forEach(function(p) { projectIds[p.Id] = true; });
       var counts = {};
-      projects.forEach(function(p) {
-        var prac = (p.pse__Practice__r && p.pse__Practice__r.Name) ? p.pse__Practice__r.Name : 'Unassigned';
+      state.billingMilestones.forEach(function(m) {
+        if (!projectIds[m.projectId]) return; // only milestones for filtered projects
+        var prac = m.practice || 'Unassigned';
         counts[prac] = (counts[prac] || 0) + 1;
       });
       return Object.keys(counts).sort(function(a,b){ return counts[b]-counts[a]; })
@@ -1660,12 +1654,8 @@ function init(){
   });
 
   document.getElementById('refresh-btn').addEventListener('click',function(){
-    Promise.all([
-      fetch('/api/milestones').then(function(r){ return r.ok ? r.json() : {}; })
-        .then(function(map){ state.billingMilestones = map || {}; })
-        .catch(function(){}),
-      fetchLiveData()
-    ]).then(function(results){ loadData(results[1].source, results[1].records); });
+    Promise.all([fetchMilestones(), fetchLiveData()])
+      .then(function(results){ loadData(results[1].source, results[1].records); });
   });
 
   document.getElementById('back-btn').addEventListener('click', showMainView);
@@ -1679,28 +1669,23 @@ function init(){
   });
 
   // Fetch billing milestones + project data in parallel for speed
-  Promise.all([
-    fetch('/api/milestones')
-      .then(function(r){ return r.ok ? r.json() : {}; })
-      .then(function(map){
-        state.billingMilestones = map || {};
-        console.log('Billing milestones loaded for', Object.keys(state.billingMilestones).length, 'projects');
+  function fetchMilestones() {
+    return fetch('/api/milestones')
+      .then(function(r){ return r.ok ? r.json() : []; })
+      .then(function(list){
+        state.billingMilestones = Array.isArray(list) ? list : [];
+        console.log('Billing milestones loaded:', state.billingMilestones.length, 'records');
       })
-      .catch(function(e){ console.warn('Could not load billing milestones:', e.message); }),
-    fetchLiveData()
-  ]).then(function(results){
-    var liveResult = results[1];
-    loadData(liveResult.source, liveResult.records);
-  });
+      .catch(function(e){ console.warn('Could not load billing milestones:', e.message); });
+  }
+
+  Promise.all([fetchMilestones(), fetchLiveData()])
+    .then(function(results){ loadData(results[1].source, results[1].records); });
 
   // Auto-refresh every 30 minutes to keep server awake + data fresh
   setInterval(function(){
-    Promise.all([
-      fetch('/api/milestones').then(function(r){ return r.ok ? r.json() : {}; })
-        .then(function(map){ state.billingMilestones = map || {}; })
-        .catch(function(){}),
-      fetchLiveData()
-    ]).then(function(results){ loadData(results[1].source, results[1].records); });
+    Promise.all([fetchMilestones(), fetchLiveData()])
+      .then(function(results){ loadData(results[1].source, results[1].records); });
   }, 30 * 60 * 1000);
 }
 

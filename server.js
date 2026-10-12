@@ -372,27 +372,34 @@ function handleLookupDMs(res) {
   fetchSOQL(dmSoql, tokenCache.accessToken, tokenCache.instanceUrl, done);
 }
 
-// ── /api/milestones — top-level query on pse__Milestone__c (RecordType works here) ──
-// Returns a map of { projectId: [{ id, name, targetDate }] } for Billing milestones due in 30d
+// ── /api/milestones ───────────────────────────────────────────────────────────
+// Top-level query on pse__Milestone__c (RecordType.Name works here, not in sub-queries).
+// Returns flat array of billing milestones due in next 30 days, with practice info.
 function handleMilestones(res) {
   if (!tokenCache.accessToken) {
     res.writeHead(503, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: 'No SF token set.' }));
     return;
   }
-  // Top-level query — RecordType.Name IS supported here (unlike sub-queries)
-  // Look 30 days ahead from today on the server side too
+
   var today = new Date();
   var in30  = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
   function pad(n) { return n < 10 ? '0' + n : '' + n; }
   function fmtDate(d) { return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()); }
 
-  var soql = "SELECT Id, Name, pse__Target_Date__c, pse__Project__c " +
+  // RecordType.Name = 'Billing', Status != Complete, TargetDate within 30 days
+  // Include project name + practice so client can group without cross-referencing
+  var soql =
+    "SELECT Id, Name, pse__Status__c, pse__Target_Date__c, " +
+    "pse__Project__c, pse__Project__r.Name, " +
+    "pse__Project__r.pse__Practice__r.Name " +
     "FROM pse__Milestone__c " +
     "WHERE RecordType.Name = 'Billing' " +
+    "AND pse__Status__c != 'Complete' " +
     "AND pse__Target_Date__c >= " + fmtDate(today) + " " +
     "AND pse__Target_Date__c <= " + fmtDate(in30) + " " +
-    "AND pse__Project__r.pse__Stage__c NOT IN ('Completed','Cancelled','Canceled','On Hold','Closed','Delivery Complete') " +
+    "AND pse__Project__r.pse__Stage__c NOT IN " +
+      "('Completed','Cancelled','Canceled','On Hold','Closed','Delivery Complete') " +
     "ORDER BY pse__Target_Date__c ASC LIMIT 500";
 
   fetchSOQL(soql, tokenCache.accessToken, tokenCache.instanceUrl, function(err, data) {
@@ -406,16 +413,24 @@ function handleMilestones(res) {
       res.end(JSON.stringify({ error: err.message }));
       return;
     }
-    // Build map: projectId → array of milestone stubs
-    var map = {};
-    (data.records || []).forEach(function(m) {
-      var pid = m.pse__Project__c;
-      if (!pid) return;
-      if (!map[pid]) map[pid] = [];
-      map[pid].push({ id: m.Id, name: m.Name, date: m.pse__Target_Date__c });
+
+    // Return flat list — each item has projectId, projectName, practice, milestoneName, date
+    var records = (data.records || []).map(function(m) {
+      return {
+        id:          m.Id,
+        name:        m.Name,
+        date:        m.pse__Target_Date__c,
+        status:      m.pse__Status__c,
+        projectId:   m.pse__Project__c,
+        projectName: m.pse__Project__r ? m.pse__Project__r.Name : null,
+        practice:    (m.pse__Project__r && m.pse__Project__r.pse__Practice__r)
+                       ? m.pse__Project__r.pse__Practice__r.Name
+                       : 'Unassigned'
+      };
     });
+
     res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
-    res.end(JSON.stringify(map));
+    res.end(JSON.stringify(records));
   });
 }
 
