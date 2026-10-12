@@ -1388,9 +1388,10 @@ function renderDoughnutChart(){
   state.charts.doughnut=new Chart(ctx,{type:'doughnut',data:{labels:['Green','Yellow','Red','Not Set'],datasets:[{data:data,backgroundColor:['rgba(34,197,94,0.7)','rgba(251,191,36,0.7)','rgba(248,113,113,0.7)','rgba(148,163,184,0.5)'],borderWidth:0,hoverOffset:6}]},options:{responsive:true,maintainAspectRatio:false,cutout:'68%',cursor:'pointer',plugins:{legend:{position:'bottom',labels:{color:'#64748b',font:{size:11},padding:10,boxWidth:10,borderRadius:4,usePointStyle:true,pointStyle:'circle'}},tooltip:{callbacks:{label:function(c){return '  '+c.label+': '+c.raw;}}}},onClick:function(evt,elements){
     if(!elements||!elements.length) return;
     var label=state.charts.doughnut.data.labels[elements[0].index];
+    var statusIcons={'Green':'🟢','Yellow':'🟡','Red':'🔴','Not Set':'⬜'};
     showDetailView({
       id:'status_'+label.toLowerCase().replace(/\s+/g,'_'),
-      label:'Status: '+label, icon:'🟢',
+      label:'Status: '+label, icon:statusIcons[label]||'📋',
       desc:'Projects with Overall Status Trend: '+label,
       match:function(p){
         var t=p.pse__Project_Status__c;
