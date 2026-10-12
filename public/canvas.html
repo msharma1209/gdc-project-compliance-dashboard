@@ -8,259 +8,461 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f4ff;min-height:100vh;padding:24px;}
-.hdr{display:flex;align-items:center;gap:16px;margin-bottom:24px;flex-wrap:wrap;}
-.hdr h1{font-size:1.2rem;font-weight:700;color:#0a1f44;}
+.hdr{display:flex;align-items:center;gap:16px;margin-bottom:24px;}
 .hdr a{font-size:0.82rem;color:#0176d3;text-decoration:none;}
 .hdr a:hover{text-decoration:underline;}
-.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 20px;border-radius:24px;font-size:0.88rem;font-weight:700;cursor:pointer;border:none;transition:background 0.15s;}
-.btn-primary{background:#0176d3;color:#fff;}
-.btn-primary:hover{background:#0156a3;}
-.btn-primary:disabled{opacity:0.5;cursor:not-allowed;}
-.btn-copy{background:#16a34a;color:#fff;}
-.btn-copy:hover{background:#15803d;}
-.actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:0;}
-#status{font-size:0.82rem;color:#64748b;font-style:italic;}
+.hdr h1{font-size:1.15rem;font-weight:700;color:#0a1f44;}
 .card{background:#fff;border-radius:16px;box-shadow:0 2px 12px rgba(30,80,160,0.08);padding:24px;margin-bottom:18px;}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 20px;border-radius:24px;font-size:0.88rem;font-weight:700;cursor:pointer;border:none;transition:background 0.15s;}
+.btn-primary{background:#0176d3;color:#fff;} .btn-primary:hover{background:#0156a3;} .btn-primary:disabled{opacity:0.5;cursor:not-allowed;}
+.btn-copy{background:#16a34a;color:#fff;} .btn-copy:hover{background:#15803d;}
+.actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+#status{font-size:0.82rem;color:#64748b;font-style:italic;}
 #preview-wrap{display:none;}
-#preview{font-family:'Courier New',monospace;font-size:12.5px;line-height:1.65;color:#1e293b;white-space:pre;background:#fafafa;border:1px solid #e2e8f0;border-radius:10px;padding:20px;max-height:60vh;overflow:auto;}
+/* Canvas Preview — mimics Slack canvas look */
+#canvas-preview{
+  background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:40px 48px;
+  max-width:860px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  line-height:1.6;color:#1e293b;
+}
+#canvas-preview .c-title{font-size:2rem;font-weight:800;color:#0a1f44;margin-bottom:6px;line-height:1.25;}
+#canvas-preview .c-subtitle{font-size:0.88rem;color:#64748b;margin-bottom:6px;font-style:italic;}
+#canvas-preview .c-lastupdated{font-size:0.82rem;color:#94a3b8;margin-bottom:24px;}
+#canvas-preview hr{border:none;border-top:1px solid #e2e8f0;margin:20px 0;}
+#canvas-preview .c-section{margin-bottom:24px;}
+#canvas-preview .c-section-heading{font-size:1.1rem;font-weight:700;color:#1e293b;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+#canvas-preview ul{padding-left:22px;margin-bottom:0;}
+#canvas-preview ul li{margin-bottom:5px;font-size:0.95rem;color:#334155;}
+#canvas-preview ul li strong{color:#0a1f44;}
+/* Green callout */
+.c-callout{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px 18px;margin-bottom:16px;font-size:0.88rem;color:#166534;line-height:1.5;}
+/* Table */
+.c-table{width:100%;border-collapse:collapse;font-size:0.88rem;margin-top:6px;}
+.c-table th{background:#f8faff;font-weight:700;color:#0a1f44;text-align:left;padding:10px 14px;border:1px solid #e2e8f0;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.5px;}
+.c-table td{padding:10px 14px;border:1px solid #e2e8f0;color:#334155;vertical-align:top;}
+.c-table tr:nth-child(even) td{background:#f8faff;}
+.c-table td:first-child{color:#94a3b8;font-weight:600;text-align:center;width:42px;}
+.c-table td.count{font-weight:700;color:#0a1f44;text-align:center;width:70px;}
+.c-table td.comment{color:#64748b;font-style:italic;font-size:0.83rem;}
+/* copy textarea (hidden) */
+#copy-area{position:fixed;left:-9999px;top:0;}
+/* Steps */
 .steps{display:flex;flex-direction:column;gap:10px;margin-top:14px;}
 .step{display:flex;gap:12px;align-items:flex-start;}
 .sn{flex-shrink:0;width:26px;height:26px;border-radius:50%;background:#0176d3;color:#fff;font-size:0.75rem;font-weight:700;display:flex;align-items:center;justify-content:center;}
 .st{font-size:0.86rem;color:#334155;line-height:1.5;padding-top:3px;}
-.st b{color:#0a1f44;}
 kbd{background:#f1f5f9;border:1px solid #cbd5e1;border-radius:4px;padding:1px 6px;font-size:0.78rem;font-family:monospace;}
 </style>
 </head>
 <body>
-
 <div class="hdr">
-  <a href="/">&#8592; Back to Dashboard</a>
+  <a href="/">&#8592; Dashboard</a>
   <h1>&#128203; Slack Canvas Export</h1>
 </div>
 
 <div class="card">
   <div class="actions">
-    <button class="btn btn-primary" id="gen-btn" onclick="generate()">&#9889; Generate Canvas from Live Data</button>
-    <button class="btn btn-copy" id="copy-btn" onclick="copyCanvas()" style="display:none">&#128203; Copy to Clipboard</button>
+    <button class="btn btn-primary" id="gen-btn" onclick="generate()">&#9889; Generate from Live Data</button>
+    <button class="btn btn-copy" id="copy-btn" onclick="copyCanvas()" style="display:none">&#128203; Copy Plain Text for Slack</button>
     <span id="status">Click Generate to pull the latest data from Salesforce.</span>
   </div>
 </div>
 
 <div class="card" id="preview-wrap">
-  <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#64748b;margin-bottom:12px;">Canvas Preview — copy this into Slack</div>
-  <pre id="preview"></pre>
+  <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#64748b;margin-bottom:16px;">Canvas Preview — mirrors the Slack canvas format</div>
+  <div id="canvas-preview"></div>
 </div>
 
 <div class="card">
   <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#64748b;margin-bottom:12px;">How to paste into Slack Canvas</div>
   <div class="steps">
-    <div class="step"><div class="sn">1</div><div class="st">Click <b>Generate Canvas from Live Data</b> above.</div></div>
-    <div class="step"><div class="sn">2</div><div class="st">Click <b>Copy to Clipboard</b>.</div></div>
-    <div class="step"><div class="sn">3</div><div class="st">Open your Slack canvas &#8594; click inside it &#8594; press <kbd>Ctrl+A</kbd> to select all existing content &#8594; <kbd>Delete</kbd> to clear.</div></div>
-    <div class="step"><div class="sn">4</div><div class="st">Press <kbd>Ctrl+V</kbd> to paste. Slack renders headings and bullets automatically.</div></div>
+    <div class="step"><div class="sn">1</div><div class="st">Click <strong>Generate from Live Data</strong> above.</div></div>
+    <div class="step"><div class="sn">2</div><div class="st">Click <strong>Copy Plain Text for Slack</strong>.</div></div>
+    <div class="step"><div class="sn">3</div><div class="st">Open your Slack canvas &#8594; click inside &#8594; <kbd>Ctrl+A</kbd> &#8594; <kbd>Delete</kbd> to clear old content.</div></div>
+    <div class="step"><div class="sn">4</div><div class="st">Press <kbd>Ctrl+V</kbd> to paste. Slack renders headings and bullet lists automatically.</div></div>
   </div>
 </div>
 
+<textarea id="copy-area"></textarea>
+
 <script>
-// ── Exact same helpers as index.html ─────────────────────────────────────────
-var TODAY = new Date();
-TODAY.setHours(12,0,0,0);
+/* ── Exact same helpers as index.html ─────────────────────────────────── */
+var TODAY = new Date(); TODAY.setHours(12,0,0,0);
 
-function parseDate(str) {
-  if (!str) return null;
-  var p = str.split('-'); if (p.length !== 3) return null;
-  return new Date(Date.UTC(+p[0], +p[1]-1, +p[2], 12, 0, 0));
+function parseDate(str){
+  if(!str) return null;
+  var p=str.split('-'); if(p.length!==3) return null;
+  return new Date(Date.UTC(+p[0],+p[1]-1,+p[2],12,0,0));
 }
-function daysDiff(d1, d2) { return Math.round((d1.getTime()-d2.getTime())/86400000); }
+function daysDiff(d1,d2){ return Math.round((d1.getTime()-d2.getTime())/86400000); }
 
-function normaliseProjects(records) {
-  records.forEach(function(p) {
-    var srRecs = p.Status_Reports__r && p.Status_Reports__r.records;
-    p._lastStatusReport = (srRecs && srRecs.length > 0) ? srRecs[0].PSA_PM_Status_Report_Week__c : null;
-    var csRecs = p.Customer_Surveys__r && p.Customer_Surveys__r.records;
-    p._lastCSAT = (csRecs && csRecs.length > 0) ? csRecs[0].psa_pm_Survey_Sent_Date__c : null;
+function normaliseProjects(records){
+  records.forEach(function(p){
+    var sr=p.Status_Reports__r&&p.Status_Reports__r.records;
+    p._lastStatusReport=(sr&&sr.length)?sr[0].PSA_PM_Status_Report_Week__c:null;
+    var cs=p.Customer_Surveys__r&&p.Customer_Surveys__r.records;
+    p._lastCSAT=(cs&&cs.length)?cs[0].psa_pm_Survey_Sent_Date__c:null;
+    var ae=p.Adoption_Events__r&&p.Adoption_Events__r.records;
+    p._hasAE=!!(ae&&ae.length);
   });
   return records;
 }
-
-function isInternal(p) {
-  var badStages = ['completed','cancelled','canceled','on hold','closed','delivery complete'];
-  if (badStages.indexOf((p.pse__Stage__c||'').toLowerCase()) !== -1) return true;
-  var prac = (p.pse__Practice__r && p.pse__Practice__r.Name) ? p.pse__Practice__r.Name.toLowerCase() : '';
-  if (prac === 'internal') return true;
-  var cat = (p.psa_pm_Project_Category__c||'').toLowerCase();
-  return cat === 'productive non - billable' || cat === 'internal';
+function isInternal(p){
+  var bad=['completed','cancelled','canceled','on hold','closed','delivery complete'];
+  if(bad.indexOf((p.pse__Stage__c||'').toLowerCase())!==-1) return true;
+  var prac=((p.pse__Practice__r&&p.pse__Practice__r.Name)||'').toLowerCase();
+  if(prac==='internal') return true;
+  var cat=(p.psa_pm_Project_Category__c||'').toLowerCase();
+  return cat==='productive non - billable'||cat==='internal';
+}
+function hasRecentTimecard(p){
+  if(!p.psa_tm_Last_Time_Entry_Date__c) return false;
+  var d=parseDate(p.psa_tm_Last_Time_Entry_Date__c);
+  return d&&daysDiff(TODAY,d)<=90;
+}
+function fmtOrdinal(d){
+  var s=['th','st','nd','rd'], v=d%100;
+  return d+(s[(v-20)%10]||s[v]||s[0]);
+}
+function fmtDateLong(dt){
+  var months=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var days=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  return days[dt.getDay()]+', '+months[dt.getMonth()]+' '+fmtOrdinal(dt.getDate());
 }
 
-function hasRecentTimecard(p) {
-  if (!p.psa_tm_Last_Time_Entry_Date__c) return false;
-  var d = parseDate(p.psa_tm_Last_Time_Entry_Date__c);
-  return d && daysDiff(TODAY, d) <= 90;
-}
+/* ── Build data object ────────────────────────────────────────────────── */
+function computeData(records){
+  var active=records.filter(function(p){ return !isInternal(p)&&hasRecentTimecard(p); });
+  var total=active.length;
+  var oct31=new Date(Date.UTC(2026,9,31,12,0,0));
 
-function hasMissingAdoptionEvent(p) {
-  if (p.PSA_Adoption_Event_Not_Required_Reason__c) return false;
-  var aes = p.Adoption_Events__r && p.Adoption_Events__r.records;
-  return !aes || aes.length === 0;
-}
+  /* counts */
+  var pastEnd       = active.filter(function(p){ var d=parseDate(p.pse__End_Date__c); return d&&d<TODAY; }).length;
+  var endingOct     = active.filter(function(p){ var d=parseDate(p.pse__End_Date__c); return d&&d>=TODAY&&d<=oct31; }).length;
+  var noStatus      = active.filter(function(p){ return !p.pse__Project_Status__c; }).length;
+  var missingRpt    = active.filter(function(p){
+    if(!p._lastStatusReport) return true;
+    var d=parseDate(p._lastStatusReport); return d&&daysDiff(TODAY,d)>14;
+  }).length;
+  var redStatus     = active.filter(function(p){ return p.pse__Project_Status__c==='Red'||p.psa_Overall_Project_Status_Trend__c==='Red'; }).length;
+  var lowMargin     = active.filter(function(p){ return p.PSA_PM_Margin_Percent__c!=null&&p.PSA_PM_Margin_Percent__c<50; }).length;
+  var overBudget    = active.filter(function(p){ return p.PSA_PM_Total_Billable_Hours_Remaining__c!=null&&p.PSA_PM_Total_Billable_Hours_Remaining__c<0; }).length;
+  var zeroHours     = active.filter(function(p){ return !p.pse__Planned_Hours__c||p.pse__Planned_Hours__c===0; }).length;
+  var timecardLate  = active.filter(function(p){
+    if(!p.psa_tm_Last_Time_Entry_Date__c) return true;
+    var d=parseDate(p.psa_tm_Last_Time_Entry_Date__c); return d&&daysDiff(TODAY,d)>30;
+  }).length;
+  var missingCSAT   = active.filter(function(p){
+    if(!p._lastCSAT) return true;
+    var d=parseDate(p._lastCSAT); return !d||daysDiff(TODAY,d)>90;
+  }).length;
+  var missingAE     = active.filter(function(p){ return !p._hasAE&&!p.PSA_Adoption_Event_Not_Required_Reason__c; }).length;
+  var atRisk        = active.filter(function(p){ return p.psa_pm_At_Risk__c; }).length;
 
-function hasUpcomingForecastAdoption(p) {
-  var events = p.Adoption_Events__r && p.Adoption_Events__r.records;
-  if (!events || events.length === 0) return false;
-  return events.some(function(e) {
-    var st = (e.PSA_PM_Adoption_Event_Status__c||'').toLowerCase();
-    return st === 'forecast' || st === 'forecasted';
-  });
-}
-
-// ── KPI definitions (mirrors index.html exactly) ─────────────────────────────
-var KPI_DEFS = [
-  { id:'no_status',        label:'Status Updated',          icon:'📋',
-    match: function(p){ return !isInternal(p) && !p.pse__Project_Status__c; } },
-  { id:'missing_reports',  label:'Status Reports Filed',    icon:'📄',
-    match: function(p){
-      if(isInternal(p)) return false;
-      if(!p._lastStatusReport) return true;
-      var d=parseDate(p._lastStatusReport); return d && daysDiff(TODAY,d)>14;
-    }},
-  { id:'red_status',       label:'Not Red Status',          icon:'🔴',
-    match: function(p){ return !isInternal(p)&&(p.pse__Project_Status__c==='Red'||p.psa_Overall_Project_Status_Trend__c==='Red'); }},
-  { id:'past_end',         label:'Within End Date',         icon:'📅',
-    match: function(p){ var d=parseDate(p.pse__End_Date__c); return !isInternal(p)&&d&&d<TODAY; }},
-  { id:'low_margin',       label:'Healthy Margin (>=50%)',  icon:'💰',
-    match: function(p){ return !isInternal(p)&&p.PSA_PM_Margin_Percent__c!=null&&p.PSA_PM_Margin_Percent__c<50; }},
-  { id:'timecard',         label:'Timecard Up to Date',     icon:'🕐',
-    match: function(p){
-      if(isInternal(p)) return false;
-      if(!p.psa_tm_Last_Time_Entry_Date__c) return true;
-      var d=parseDate(p.psa_tm_Last_Time_Entry_Date__c); return d&&daysDiff(TODAY,d)>30;
-    }},
-  { id:'zero_hours',       label:'Planned Hours Entered',   icon:'⏱️',
-    match: function(p){ return !isInternal(p)&&(!p.pse__Planned_Hours__c||p.pse__Planned_Hours__c===0); }},
-  { id:'over_budget',      label:'Hours Within Budget',     icon:'⚠️',
-    match: function(p){ return !isInternal(p)&&p.PSA_PM_Total_Billable_Hours_Remaining__c!=null&&p.PSA_PM_Total_Billable_Hours_Remaining__c<0; }},
-  { id:'missing_csat',     label:'CSAT Survey Sent',        icon:'⭐',
-    match: function(p){
-      if(isInternal(p)) return false;
-      if(!p._lastCSAT) return true;
-      var d=parseDate(p._lastCSAT); return !d || daysDiff(TODAY,d)>90;
-    }},
-  { id:'adoption_missing', label:'Adoption Events Covered', icon:'🎯',
-    match: function(p){ return !isInternal(p)&&hasMissingAdoptionEvent(p); }}
-];
-
-// ── Canvas builder ─────────────────────────────────────────────────────────
-var canvasText = '';
-
-function padR(s, n){ s=String(s); while(s.length<n) s+=' '; return s.slice(0,n+2); }
-function padL(s, n){ s=String(s); while(s.length<n) s=' '+s; return s; }
-function bar(pct){
-  var f=Math.round(pct/10), e=10-f, b='';
-  for(var i=0;i<f;i++) b+='█';
-  for(var j=0;j<e;j++) b+='░';
-  return b+' '+pct+'%';
-}
-
-function buildCanvas(projects) {
-  var active = projects.filter(function(p){ return !isInternal(p) && hasRecentTimecard(p); });
-  var total  = active.length;
-  var L      = [];
-  var SEP    = '━'.repeat(50);
-  var now    = new Date();
-  var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  var dateStr = now.getDate() + ' ' + months[now.getMonth()] + ' ' + now.getFullYear();
-
-  // Title
-  L.push('GDC Informatica Practice — Project Compliance Dashboard');
-  L.push('📅 ' + dateStr);
-  L.push('');
-
-  // Summary
-  L.push(SEP);
-  L.push('📊  SUMMARY');
-  L.push(SEP);
-  L.push('');
-  var reds = active.filter(function(p){ return p.pse__Project_Status__c==='Red'||p.psa_pm_At_Risk__c; });
-  var oct31= new Date(Date.UTC(2026,9,31,12,0,0));
-  var endingOct = active.filter(function(p){ var d=parseDate(p.pse__End_Date__c); return d&&d>=TODAY&&d<=oct31; }).length;
-  L.push('Total Active Projects            : ' + total);
-  L.push('Projects Ending by Oct 2026      : ' + endingOct);
-  L.push('Projects At Risk / Red Status    : ' + reds.length);
-  L.push('');
-
-  // KPI Scorecard
-  L.push(SEP);
-  L.push('✅  COMPLIANCE SCORECARD  (' + total + ' active projects)');
-  L.push(SEP);
-  L.push('');
-  L.push(padR('KPI',34) + padR('Compliant',14) + 'Progress');
-  L.push('─'.repeat(72));
-  KPI_DEFS.forEach(function(k){
-    var flagged  = active.filter(k.match).length;
-    var compliant= total - flagged;
-    var pct      = total ? Math.round((compliant/total)*100) : 0;
-    L.push(padR(k.icon+' '+k.label,34) + padR(compliant+'/'+total,14) + bar(pct));
-  });
-  L.push('');
-
-  // Practice breakdown
-  L.push(SEP);
-  L.push('🏢  PROJECTS BY PRACTICE');
-  L.push(SEP);
-  L.push('');
-  var pracs = {};
+  /* practice breakdown */
+  var pracMap={};
   active.forEach(function(p){
-    var prac=(p.pse__Practice__r&&p.pse__Practice__r.Name)||'Unassigned';
-    pracs[prac]=(pracs[prac]||0)+1;
+    var k=(p.pse__Practice__r&&p.pse__Practice__r.Name)||'Unassigned';
+    pracMap[k]=(pracMap[k]||0)+1;
   });
-  Object.keys(pracs).sort(function(a,b){return pracs[b]-pracs[a];}).forEach(function(prac){
-    var cnt=pracs[prac], pct=total?Math.round((cnt/total)*100):0;
-    L.push('  • '+padR(prac,34)+padL(cnt+' projects',12)+'  ('+pct+'%)');
-  });
-  L.push('');
+  var pracList=Object.keys(pracMap).sort(function(a,b){ return pracMap[b]-pracMap[a]; });
 
-  // DM breakdown
-  L.push(SEP);
-  L.push('👤  PROJECTS BY DELIVERY MANAGER');
-  L.push(SEP);
-  L.push('');
-  var dms = {};
+  /* DM breakdown */
+  var dmMap={};
   active.forEach(function(p){
-    var dm=(p.pse__Project_Manager__r&&p.pse__Project_Manager__r.Name)||'Unassigned';
-    dms[dm]=(dms[dm]||0)+1;
+    var k=(p.pse__Project_Manager__r&&p.pse__Project_Manager__r.Name)||'Unassigned';
+    dmMap[k]=(dmMap[k]||0)+1;
   });
-  Object.keys(dms).sort(function(a,b){return dms[b]-dms[a];}).forEach(function(dm){
-    L.push('  • '+padR(dm,34)+padL(dms[dm]+' projects',12));
-  });
-  L.push('');
+  var dmList=Object.keys(dmMap).sort(function(a,b){ return dmMap[b]-dmMap[a]; });
 
-  // Red / At-risk
-  if(reds.length>0){
-    L.push(SEP);
-    L.push('🚨  RED / AT-RISK PROJECTS  ('+reds.length+')');
-    L.push(SEP);
-    L.push('');
-    reds.forEach(function(p){
-      var flags=[];
-      if(p.pse__Project_Status__c==='Red') flags.push('Red Status');
-      if(p.psa_pm_At_Risk__c)              flags.push('At Risk');
-      var acct=(p.pse__Account__r&&p.pse__Account__r.Name)?'  ('+p.pse__Account__r.Name+')':'';
-      L.push('  • '+(p.Name||'')+(acct)+' — '+flags.join(', '));
+  /* Red projects list */
+  var redProjects=active.filter(function(p){ return p.pse__Project_Status__c==='Red'||p.psa_pm_At_Risk__c; });
+
+  return { total,pastEnd,endingOct,noStatus,missingRpt,redStatus,lowMargin,overBudget,
+    zeroHours,timecardLate,missingCSAT,missingAE,atRisk,
+    pracMap,pracList,dmMap,dmList,redProjects };
+}
+
+/* ── Render HTML preview (mirrors Slack canvas visual format) ─────────── */
+function renderPreview(d, dateStr){
+  var el=document.getElementById('canvas-preview');
+
+  /* helper to create elements */
+  function el2(tag,cls,txt){
+    var e=document.createElement(tag);
+    if(cls) e.className=cls;
+    if(txt!=null) e.textContent=txt;
+    return e;
+  }
+  function heading(icon,text){
+    var h=el2('div','c-section-heading');
+    h.textContent=icon+' '+text;
+    return h;
+  }
+  function bulletList(items){
+    var ul=document.createElement('ul');
+    items.forEach(function(item){
+      var li=document.createElement('li');
+      li.textContent=item;
+      ul.appendChild(li);
     });
-    L.push('');
+    return ul;
+  }
+  function tableRow(cells){
+    var tr=document.createElement('tr');
+    cells.forEach(function(c,i){
+      var td=document.createElement('td');
+      td.textContent=c.text;
+      if(c.cls) td.className=c.cls;
+      tr.appendChild(td);
+    });
+    return tr;
   }
 
-  // Footer
-  L.push(SEP);
-  L.push('🔗 Live Dashboard: https://gdc-project-compliance-dashboard.onrender.com');
-  L.push('📌 Data from Salesforce PSA · Generated '+dateStr);
-  L.push(SEP);
+  el.innerHTML='';
+
+  /* Title */
+  var title=el2('div','c-title','GDC Project Compliance Dashboard');
+  el.appendChild(title);
+  el.appendChild(el2('div','c-lastupdated','Last Updated: '+dateStr));
+  el.appendChild(document.createElement('hr'));
+
+  /* Section 1: Portfolio Health */
+  var s1=el2('div','c-section');
+  s1.appendChild(heading('🟢','Portfolio Health'));
+  s1.appendChild(bulletList([
+    d.total+' Active Projects',
+    d.pastEnd+' Past End Date',
+    d.endingOct+' Upcoming End Dates (by Oct 2026)'
+  ]));
+  el.appendChild(s1);
+
+  /* Section 2: Immediate Actions */
+  var s2=el2('div','c-section');
+  s2.appendChild(heading('⚠️','Immediate Actions'));
+  s2.appendChild(bulletList([
+    d.noStatus+' Blank Status',
+    d.missingRpt+' Missing Reports',
+    d.missingCSAT+' Missing CSAT'
+  ]));
+  el.appendChild(s2);
+
+  /* Section 3: Financial Risks */
+  var s3=el2('div','c-section');
+  s3.appendChild(heading('💰','Financial Risks'));
+  s3.appendChild(bulletList([
+    d.lowMargin+' Low Margin (<50%)',
+    d.overBudget+' Over Billed',
+    d.zeroHours+' Zero Planned Hours'
+  ]));
+  el.appendChild(s3);
+
+  el.appendChild(document.createElement('hr'));
+
+  /* Section 4: Portfolio Summary — table */
+  var s4=el2('div','c-section');
+  s4.appendChild(heading('🔢','Portfolio Summary'));
+
+  var callout=el2('div','c-callout',
+    'This report covers active billable projects with timecard activity in the last 90 days. '+
+    'Compliance metrics are calculated against the total active project count.');
+  s4.appendChild(callout);
+
+  var tableRows=[
+    [1, 'Total Active Projects',                    d.total,        '100% baseline'],
+    [2, 'Projects with No Status',                  d.noStatus,     d.noStatus>0?'Action required':''],
+    [3, 'Projects with Missing Status Reports',     d.missingRpt,   d.missingRpt>0?'Report overdue >14 days':''],
+    [4, 'Projects in Red Status',                   d.redStatus,    d.redStatus>0?'Needs immediate attention':''],
+    [5, 'Active Projects Past End Date',            d.pastEnd,      d.pastEnd>0?'End date extension needed':''],
+    [6, 'Upcoming Project End Dates (Oct 2026)',    d.endingOct,    'Plan for closure/extension'],
+    [7, 'Low Margin Projects (<50%)',               d.lowMargin,    d.lowMargin>0?'Finance review needed':''],
+    [8, 'Last Timecard >30 Days',                   d.timecardLate, d.timecardLate>0?'Follow up with DM':''],
+    [9, 'Zero Planned Hours',                       d.zeroHours,    d.zeroHours>0?'Update project plan':''],
+    [10,'Over Billed (Negative Hours Remaining)',   d.overBudget,   d.overBudget>0?'SOW amendment may be needed':''],
+    [11,'Missing CSAT Survey (>90 days)',           d.missingCSAT,  d.missingCSAT>0?'Send survey':''],
+    [12,'Missing Adoption Events',                  d.missingAE,    d.missingAE>0?'Create AE or add exemption':''],
+    [13,'At Risk Projects',                         d.atRisk,       d.atRisk>0?'Review risk register':''],
+  ];
+
+  var tbl=document.createElement('table'); tbl.className='c-table';
+  var thead=document.createElement('thead');
+  var hrow=document.createElement('tr');
+  ['#','Observation','Count','Comment'].forEach(function(h){
+    var th=document.createElement('th'); th.textContent=h; hrow.appendChild(th);
+  });
+  thead.appendChild(hrow); tbl.appendChild(thead);
+  var tbody=document.createElement('tbody');
+  tableRows.forEach(function(r){
+    tbody.appendChild(tableRow([
+      {text:r[0]},
+      {text:r[1]},
+      {text:r[2], cls:'count'},
+      {text:r[3], cls:'comment'}
+    ]));
+  });
+  tbl.appendChild(tbody);
+  s4.appendChild(tbl);
+  el.appendChild(s4);
+
+  el.appendChild(document.createElement('hr'));
+
+  /* Section 5: Practice Breakdown */
+  var s5=el2('div','c-section');
+  s5.appendChild(heading('🏢','Projects by Practice'));
+  var ptbl=document.createElement('table'); ptbl.className='c-table';
+  var pt=document.createElement('thead'); var ptr=document.createElement('tr');
+  ['Practice','Projects','% of Portfolio'].forEach(function(h){ var th=document.createElement('th'); th.textContent=h; ptr.appendChild(th); });
+  pt.appendChild(ptr); ptbl.appendChild(pt);
+  var pb=document.createElement('tbody');
+  d.pracList.forEach(function(prac){
+    var cnt=d.pracMap[prac];
+    var pct=d.total?Math.round((cnt/d.total)*100):0;
+    var tr=document.createElement('tr');
+    [{text:prac},{text:cnt,cls:'count'},{text:pct+'%',cls:'count'}].forEach(function(c){
+      var td=document.createElement('td'); td.textContent=c.text; if(c.cls) td.className=c.cls; tr.appendChild(td);
+    });
+    pb.appendChild(tr);
+  });
+  ptbl.appendChild(pb); s5.appendChild(ptbl);
+  el.appendChild(s5);
+
+  el.appendChild(document.createElement('hr'));
+
+  /* Section 6: DM Breakdown */
+  var s6=el2('div','c-section');
+  s6.appendChild(heading('👤','Projects by Delivery Manager'));
+  var dtbl=document.createElement('table'); dtbl.className='c-table';
+  var dt=document.createElement('thead'); var dtr=document.createElement('tr');
+  ['Delivery Manager','Projects'].forEach(function(h){ var th=document.createElement('th'); th.textContent=h; dtr.appendChild(th); });
+  dt.appendChild(dtr); dtbl.appendChild(dt);
+  var db=document.createElement('tbody');
+  d.dmList.forEach(function(dm){
+    var tr=document.createElement('tr');
+    [{text:dm},{text:d.dmMap[dm],cls:'count'}].forEach(function(c){
+      var td=document.createElement('td'); td.textContent=c.text; if(c.cls) td.className=c.cls; tr.appendChild(td);
+    });
+    db.appendChild(tr);
+  });
+  dtbl.appendChild(db); s6.appendChild(dtbl);
+  el.appendChild(s6);
+
+  /* Section 7: Red/At-risk */
+  if(d.redProjects.length>0){
+    el.appendChild(document.createElement('hr'));
+    var s7=el2('div','c-section');
+    s7.appendChild(heading('🚨','Red / At-Risk Projects ('+d.redProjects.length+')'));
+    var rtbl=document.createElement('table'); rtbl.className='c-table';
+    var rt=document.createElement('thead'); var rtr=document.createElement('tr');
+    ['Project','Account','Status','At Risk'].forEach(function(h){ var th=document.createElement('th'); th.textContent=h; rtr.appendChild(th); });
+    rt.appendChild(rtr); rtbl.appendChild(rt);
+    var rb=document.createElement('tbody');
+    d.redProjects.forEach(function(p){
+      var tr=document.createElement('tr');
+      [
+        {text:p.Name||''},
+        {text:(p.pse__Account__r&&p.pse__Account__r.Name)||''},
+        {text:p.pse__Project_Status__c||'—'},
+        {text:p.psa_pm_At_Risk__c?'Yes':'No'}
+      ].forEach(function(c){
+        var td=document.createElement('td'); td.textContent=c.text; tr.appendChild(td);
+      });
+      rb.appendChild(tr);
+    });
+    rtbl.appendChild(rb); s7.appendChild(rtbl);
+    el.appendChild(s7);
+  }
+
+  /* Footer */
+  el.appendChild(document.createElement('hr'));
+  var footer=el2('div','','');
+  footer.style.cssText='font-size:0.78rem;color:#94a3b8;text-align:center;margin-top:8px;';
+  footer.textContent='Live Dashboard: https://gdc-project-compliance-dashboard.onrender.com  |  Data from Salesforce PSA  |  Generated '+dateStr;
+  el.appendChild(footer);
+}
+
+/* ── Build plain text for clipboard ──────────────────────────────────── */
+function buildPlainText(d, dateStr){
+  var L=[];
+  function sec(icon,title){ L.push(''); L.push(icon+' '+title); L.push('─'.repeat(40)); }
+
+  L.push('GDC Project Compliance Dashboard');
+  L.push('Last Updated: '+dateStr);
+  L.push('');
+
+  sec('🟢','Portfolio Health');
+  L.push('• '+d.total+' Active Projects');
+  L.push('• '+d.pastEnd+' Past End Date');
+  L.push('• '+d.endingOct+' Upcoming End Dates (by Oct 2026)');
+
+  sec('⚠️','Immediate Actions');
+  L.push('• '+d.noStatus+' Blank Status');
+  L.push('• '+d.missingRpt+' Missing Reports');
+  L.push('• '+d.missingCSAT+' Missing CSAT');
+
+  sec('💰','Financial Risks');
+  L.push('• '+d.lowMargin+' Low Margin (<50%)');
+  L.push('• '+d.overBudget+' Over Billed');
+  L.push('• '+d.zeroHours+' Zero Planned Hours');
+
+  sec('🔢','Portfolio Summary');
+  L.push('');
+  function pad(s,n){ s=String(s); while(s.length<n) s+=' '; return s; }
+  L.push(pad('#',4)+pad('Observation',46)+pad('Count',8)+'Comment');
+  L.push('─'.repeat(80));
+  var rows=[
+    [1,'Total Active Projects',                   d.total,        '100% baseline'],
+    [2,'Projects with No Status',                 d.noStatus,     d.noStatus>0?'Action required':'✓'],
+    [3,'Projects with Missing Status Reports',    d.missingRpt,   d.missingRpt>0?'Report overdue >14 days':'✓'],
+    [4,'Projects in Red Status',                  d.redStatus,    d.redStatus>0?'Needs immediate attention':'✓'],
+    [5,'Active Projects Past End Date',           d.pastEnd,      d.pastEnd>0?'End date extension needed':'✓'],
+    [6,'Upcoming End Dates (Oct 2026)',           d.endingOct,    'Plan for closure/extension'],
+    [7,'Low Margin Projects (<50%)',              d.lowMargin,    d.lowMargin>0?'Finance review needed':'✓'],
+    [8,'Last Timecard >30 Days',                  d.timecardLate, d.timecardLate>0?'Follow up with DM':'✓'],
+    [9,'Zero Planned Hours',                      d.zeroHours,    d.zeroHours>0?'Update project plan':'✓'],
+    [10,'Over Billed (Negative Hours Remaining)', d.overBudget,   d.overBudget>0?'SOW amendment may be needed':'✓'],
+    [11,'Missing CSAT Survey (>90 days)',         d.missingCSAT,  d.missingCSAT>0?'Send survey':'✓'],
+    [12,'Missing Adoption Events',                d.missingAE,    d.missingAE>0?'Create AE or add exemption':'✓'],
+    [13,'At Risk Projects',                       d.atRisk,       d.atRisk>0?'Review risk register':'✓'],
+  ];
+  rows.forEach(function(r){ L.push(pad(r[0],4)+pad(r[1],46)+pad(r[2],8)+r[3]); });
+
+  sec('🏢','Projects by Practice');
+  L.push('');
+  L.push(pad('Practice',36)+pad('Projects',10)+'% of Portfolio');
+  L.push('─'.repeat(60));
+  d.pracList.forEach(function(prac){
+    var cnt=d.pracMap[prac], pct=d.total?Math.round((cnt/d.total)*100):0;
+    L.push(pad(prac,36)+pad(cnt,10)+pct+'%');
+  });
+
+  sec('👤','Projects by Delivery Manager');
+  L.push('');
+  L.push(pad('Delivery Manager',36)+'Projects');
+  L.push('─'.repeat(50));
+  d.dmList.forEach(function(dm){ L.push(pad(dm,36)+d.dmMap[dm]); });
+
+  if(d.redProjects.length>0){
+    sec('🚨','Red / At-Risk Projects ('+d.redProjects.length+')');
+    L.push('');
+    L.push(pad('Project',36)+pad('Account',26)+pad('Status',12)+'At Risk');
+    L.push('─'.repeat(80));
+    d.redProjects.forEach(function(p){
+      L.push(pad(p.Name||'',36)+pad((p.pse__Account__r&&p.pse__Account__r.Name)||'',26)+pad(p.pse__Project_Status__c||'—',12)+(p.psa_pm_At_Risk__c?'Yes':'No'));
+    });
+  }
+
+  L.push('');
+  L.push('─'.repeat(80));
+  L.push('Live Dashboard: https://gdc-project-compliance-dashboard.onrender.com');
+  L.push('Data from Salesforce PSA | Generated '+dateStr);
 
   return L.join('\n');
 }
 
-// ── Fetch + generate ────────────────────────────────────────────────────────
-function setStatus(msg, color){
+/* ── Fetch and render ─────────────────────────────────────────────────── */
+var plainText='';
+
+function setStatus(msg,color){
   var el=document.getElementById('status');
   el.textContent=msg; el.style.color=color||'#64748b';
 }
@@ -274,14 +476,16 @@ function generate(){
     .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
     .then(function(data){
       if(data.error) throw new Error(data.error);
-      var records = normaliseProjects(data.records||[]);
-      if(!records.length) throw new Error('0 projects returned — is the SF token set? Visit /admin.');
-      canvasText = buildCanvas(records);
-      document.getElementById('preview').textContent = canvasText;
+      var records=normaliseProjects(data.records||[]);
+      if(!records.length) throw new Error('0 projects returned — check SF token at /admin');
+      var d=computeData(records);
+      var dateStr=fmtDateLong(TODAY);
+      renderPreview(d, dateStr);
+      plainText=buildPlainText(d, dateStr);
       document.getElementById('preview-wrap').style.display='block';
       document.getElementById('copy-btn').style.display='inline-flex';
       btn.disabled=false;
-      setStatus('Canvas ready with '+records.length+' projects from Salesforce. Click Copy to paste into Slack.','#16a34a');
+      setStatus('Ready — '+records.length+' projects loaded. Click Copy to paste into Slack.','#16a34a');
     })
     .catch(function(e){
       btn.disabled=false;
@@ -290,20 +494,21 @@ function generate(){
 }
 
 function copyCanvas(){
-  if(!canvasText) return;
+  var ta=document.getElementById('copy-area');
+  ta.value=plainText; ta.select();
   var btn=document.getElementById('copy-btn');
-  function done(){ btn.textContent='✅ Copied!'; setTimeout(function(){ btn.textContent='📋 Copy to Clipboard'; },2500); }
-  if(navigator.clipboard){
-    navigator.clipboard.writeText(canvasText).then(done).catch(function(){
-      fallbackCopy(); done();
-    });
-  } else { fallbackCopy(); done(); }
-}
-function fallbackCopy(){
-  var ta=document.createElement('textarea');
-  ta.value=canvasText; ta.style.position='fixed'; ta.style.opacity='0';
-  document.body.appendChild(ta); ta.select();
-  document.execCommand('copy'); document.body.removeChild(ta);
+  try {
+    if(navigator.clipboard){
+      navigator.clipboard.writeText(plainText).then(function(){
+        btn.textContent='Copied!';
+        setTimeout(function(){ btn.textContent='Copy Plain Text for Slack'; },2500);
+      });
+    } else {
+      document.execCommand('copy');
+      btn.textContent='Copied!';
+      setTimeout(function(){ btn.textContent='Copy Plain Text for Slack'; },2500);
+    }
+  } catch(e){ alert('Copy failed — please manually copy from the preview area.'); }
 }
 </script>
 </body>
