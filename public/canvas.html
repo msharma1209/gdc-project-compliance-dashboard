@@ -3,90 +3,123 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>GDC Canvas Export</title>
+<title>GDC Project Compliance Canvas</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpolygon points='32,2 62,22 62,42 32,62 2,42 2,22' fill='%23FF4D00'/%3E%3C/svg%3E">
 <style>
+/* ── Reset ── */
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f4ff;min-height:100vh;padding:24px;}
-.hdr{display:flex;align-items:center;gap:16px;margin-bottom:24px;}
-.hdr a{font-size:0.82rem;color:#0176d3;text-decoration:none;}
-.hdr a:hover{text-decoration:underline;}
-.hdr h1{font-size:1.15rem;font-weight:700;color:#0a1f44;}
-.card{background:#fff;border-radius:16px;box-shadow:0 2px 12px rgba(30,80,160,0.08);padding:24px;margin-bottom:18px;}
-.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 20px;border-radius:24px;font-size:0.88rem;font-weight:700;cursor:pointer;border:none;transition:background 0.15s;}
+
+/* ── Screen shell ── */
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f4ff;color:#1e293b;min-height:100vh;}
+.screen-bar{display:flex;align-items:center;gap:14px;padding:12px 24px;background:#fff;border-bottom:1px solid #e2e8f0;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(30,80,160,0.06);}
+.screen-bar a{font-size:0.82rem;color:#0176d3;text-decoration:none;white-space:nowrap;}
+.screen-bar a:hover{text-decoration:underline;}
+.screen-bar h1{font-size:1rem;font-weight:700;color:#0a1f44;flex:1;}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 18px;border-radius:22px;font-size:0.82rem;font-weight:700;cursor:pointer;border:none;transition:background 0.15s;white-space:nowrap;}
 .btn-primary{background:#0176d3;color:#fff;} .btn-primary:hover{background:#0156a3;} .btn-primary:disabled{opacity:0.5;cursor:not-allowed;}
-.btn-copy{background:#16a34a;color:#fff;} .btn-copy:hover{background:#15803d;}
-.actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
-#status{font-size:0.82rem;color:#64748b;font-style:italic;}
-#preview-wrap{display:none;}
-/* Canvas Preview — mimics Slack canvas look */
-#canvas-preview{
-  background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:40px 48px;
-  max-width:860px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-  line-height:1.6;color:#1e293b;
+.btn-print{background:#6366f1;color:#fff;} .btn-print:hover{background:#4f46e5;}
+#status{font-size:0.8rem;color:#64748b;font-style:italic;}
+.screen-content{padding:28px 24px;}
+
+/* ── Canvas document ── */
+#canvas-doc{
+  max-width:900px;margin:0 auto;background:#fff;
+  border-radius:18px;box-shadow:0 4px 32px rgba(30,80,160,0.10);
+  padding:48px 52px;
 }
-#canvas-preview .c-title{font-size:2rem;font-weight:800;color:#0a1f44;margin-bottom:6px;line-height:1.25;}
-#canvas-preview .c-subtitle{font-size:0.88rem;color:#64748b;margin-bottom:6px;font-style:italic;}
-#canvas-preview .c-lastupdated{font-size:0.82rem;color:#94a3b8;margin-bottom:24px;}
-#canvas-preview hr{border:none;border-top:1px solid #e2e8f0;margin:20px 0;}
-#canvas-preview .c-section{margin-bottom:24px;}
-#canvas-preview .c-section-heading{font-size:1.1rem;font-weight:700;color:#1e293b;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
-#canvas-preview ul{padding-left:22px;margin-bottom:0;}
-#canvas-preview ul li{margin-bottom:5px;font-size:0.95rem;color:#334155;}
-#canvas-preview ul li strong{color:#0a1f44;}
-/* Green callout */
-.c-callout{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px 18px;margin-bottom:16px;font-size:0.88rem;color:#166534;line-height:1.5;}
-/* Table */
-.c-table{width:100%;border-collapse:collapse;font-size:0.88rem;margin-top:6px;}
-.c-table th{background:#f8faff;font-weight:700;color:#0a1f44;text-align:left;padding:10px 14px;border:1px solid #e2e8f0;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.5px;}
-.c-table td{padding:10px 14px;border:1px solid #e2e8f0;color:#334155;vertical-align:top;}
-.c-table tr:nth-child(even) td{background:#f8faff;}
-.c-table td:first-child{color:#94a3b8;font-weight:600;text-align:center;width:42px;}
-.c-table td.count{font-weight:700;color:#0a1f44;text-align:center;width:70px;}
-.c-table td.comment{color:#64748b;font-style:italic;font-size:0.83rem;}
-/* copy textarea (hidden) */
-#copy-area{position:fixed;left:-9999px;top:0;}
-/* Steps */
-.steps{display:flex;flex-direction:column;gap:10px;margin-top:14px;}
-.step{display:flex;gap:12px;align-items:flex-start;}
-.sn{flex-shrink:0;width:26px;height:26px;border-radius:50%;background:#0176d3;color:#fff;font-size:0.75rem;font-weight:700;display:flex;align-items:center;justify-content:center;}
-.st{font-size:0.86rem;color:#334155;line-height:1.5;padding-top:3px;}
-kbd{background:#f1f5f9;border:1px solid #cbd5e1;border-radius:4px;padding:1px 6px;font-size:0.78rem;font-family:monospace;}
+
+/* ── Typography ── */
+.doc-title{font-size:2rem;font-weight:800;color:#0a1f44;line-height:1.2;margin-bottom:4px;}
+.doc-date{font-size:0.9rem;color:#64748b;margin-bottom:6px;font-style:italic;}
+.doc-divider{border:none;border-top:2px solid #e2e8f0;margin:22px 0;}
+
+/* ── Section headings ── */
+.section{margin-bottom:32px;}
+.section-heading{font-size:1.18rem;font-weight:800;color:#0a1f44;display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+
+/* ── Callout box ── */
+.callout{border-radius:10px;padding:13px 18px;margin-bottom:16px;font-size:0.88rem;line-height:1.55;}
+.callout-green{background:#f0fdf4;border-left:4px solid #16a34a;color:#166534;}
+.callout-yellow{background:#fefce8;border-left:4px solid #d97706;color:#92400e;}
+.callout-red{background:#fef2f2;border-left:4px solid #dc2626;color:#991b1b;}
+.callout-blue{background:#eff6ff;border-left:4px solid #0176d3;color:#1e40af;}
+
+/* ── Bullet lists ── */
+.bullet-list{padding-left:0;list-style:none;display:flex;flex-wrap:wrap;gap:10px;margin-bottom:0;}
+.bullet-list li{display:inline-flex;align-items:center;gap:7px;background:#f8faff;border:1px solid #e2e8f0;border-radius:20px;padding:5px 14px;font-size:0.88rem;font-weight:600;color:#334155;}
+.bullet-list li .num{font-size:1.1rem;font-weight:800;color:#0a1f44;}
+.bullet-list li .lbl{color:#64748b;font-weight:400;}
+
+/* ── Summary table (4 cols) ── */
+.summary-table{width:100%;border-collapse:collapse;font-size:0.85rem;margin-top:4px;}
+.summary-table th{background:#f1f5f9;font-weight:700;color:#0a1f44;padding:9px 13px;border:1px solid #e2e8f0;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;}
+.summary-table td{padding:9px 13px;border:1px solid #e2e8f0;vertical-align:top;}
+.summary-table tr:nth-child(even) td{background:#f8faff;}
+.summary-table .col-num{text-align:center;width:36px;color:#94a3b8;font-weight:600;}
+.summary-table .col-count{text-align:center;width:64px;font-weight:800;font-size:1rem;}
+.summary-table .col-count.red{color:#dc2626;}
+.summary-table .col-count.green{color:#16a34a;}
+.summary-table .col-count.amber{color:#d97706;}
+.summary-table .col-comment{color:#64748b;font-size:0.82rem;font-style:italic;}
+
+/* ── Detail project tables ── */
+.detail-table{width:100%;border-collapse:collapse;font-size:0.82rem;margin-top:10px;}
+.detail-table th{background:#1e293b;color:#e2e8f0;padding:8px 11px;text-align:left;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;}
+.detail-table td{padding:8px 11px;border-bottom:1px solid #f1f5f9;vertical-align:top;}
+.detail-table tr:hover td{background:#f8faff;}
+.detail-table .status-red{color:#dc2626;font-weight:700;}
+.detail-table .status-yellow{color:#d97706;font-weight:700;}
+.detail-table .status-green{color:#16a34a;font-weight:700;}
+.detail-table .tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.72rem;font-weight:600;}
+.tag-red{background:#fef2f2;color:#dc2626;border:1px solid #fecaca;}
+.tag-amber{background:#fefce8;color:#d97706;border:1px solid #fde68a;}
+.tag-green{background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;}
+.tag-blue{background:#eff6ff;color:#0176d3;border:1px solid #bfdbfe;}
+
+/* ── Practice / DM tables ── */
+.breakdown-table{width:100%;border-collapse:collapse;font-size:0.85rem;}
+.breakdown-table th{background:#f1f5f9;font-weight:700;color:#0a1f44;padding:9px 13px;border:1px solid #e2e8f0;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.5px;}
+.breakdown-table td{padding:9px 13px;border:1px solid #e2e8f0;}
+.breakdown-table tr:nth-child(even) td{background:#f8faff;}
+.bar-cell{display:flex;align-items:center;gap:10px;}
+.bar-track{flex:1;height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:4px;background:#0176d3;}
+.bar-pct{font-size:0.78rem;color:#64748b;font-weight:600;min-width:36px;text-align:right;}
+
+/* ── Footer ── */
+.doc-footer{margin-top:32px;padding-top:18px;border-top:1px solid #e2e8f0;font-size:0.78rem;color:#94a3b8;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+
+/* ── Print styles ── */
+@media print{
+  .screen-bar{display:none;}
+  .screen-content{padding:0;}
+  body{background:#fff;}
+  #canvas-doc{box-shadow:none;border-radius:0;padding:28px 36px;max-width:100%;}
+  .detail-table th{background:#334155 !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  .summary-table th,.breakdown-table th{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  .section{page-break-inside:avoid;}
+}
 </style>
 </head>
 <body>
-<div class="hdr">
+
+<!-- Screen toolbar (hidden on print) -->
+<div class="screen-bar">
   <a href="/">&#8592; Dashboard</a>
-  <h1>&#128203; Slack Canvas Export</h1>
+  <h1>&#128203; GDC Compliance Canvas</h1>
+  <button class="btn btn-primary" id="gen-btn" onclick="generate()">&#9889; Generate from Live Data</button>
+  <button class="btn btn-print" id="print-btn" onclick="window.print()" style="display:none">&#128438; Save as PDF / Print</button>
+  <span id="status">Click Generate to load live Salesforce data.</span>
 </div>
 
-<div class="card">
-  <div class="actions">
-    <button class="btn btn-primary" id="gen-btn" onclick="generate()">&#9889; Generate from Live Data</button>
-    <button class="btn btn-copy" id="copy-btn" onclick="copyCanvas()" style="display:none">&#128203; Copy Plain Text for Slack</button>
-    <span id="status">Click Generate to pull the latest data from Salesforce.</span>
-  </div>
+<div class="screen-content">
+  <div id="canvas-doc" style="display:none"></div>
 </div>
-
-<div class="card" id="preview-wrap">
-  <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#64748b;margin-bottom:16px;">Canvas Preview — mirrors the Slack canvas format</div>
-  <div id="canvas-preview"></div>
-</div>
-
-<div class="card">
-  <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#64748b;margin-bottom:12px;">How to paste into Slack Canvas</div>
-  <div class="steps">
-    <div class="step"><div class="sn">1</div><div class="st">Click <strong>Generate from Live Data</strong> above.</div></div>
-    <div class="step"><div class="sn">2</div><div class="st">Click <strong>Copy Plain Text for Slack</strong>.</div></div>
-    <div class="step"><div class="sn">3</div><div class="st">Open your Slack canvas &#8594; click inside &#8594; <kbd>Ctrl+A</kbd> &#8594; <kbd>Delete</kbd> to clear old content.</div></div>
-    <div class="step"><div class="sn">4</div><div class="st">Press <kbd>Ctrl+V</kbd> to paste. Slack renders headings and bullet lists automatically.</div></div>
-  </div>
-</div>
-
-<textarea id="copy-area"></textarea>
 
 <script>
-/* ── Exact same helpers as index.html ─────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════
+   Helpers — exact copies from index.html
+   ═══════════════════════════════════════════════════════════ */
 var TODAY = new Date(); TODAY.setHours(12,0,0,0);
 
 function parseDate(str){
@@ -95,8 +128,15 @@ function parseDate(str){
   return new Date(Date.UTC(+p[0],+p[1]-1,+p[2],12,0,0));
 }
 function daysDiff(d1,d2){ return Math.round((d1.getTime()-d2.getTime())/86400000); }
+function fmtDate(str){ if(!str) return '—'; var d=parseDate(str); if(!d) return '—'; return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }
+function fmtOrdinal(n){ var s=['th','st','nd','rd'],v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); }
+function fmtLongDate(dt){
+  var M=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var D=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  return D[dt.getDay()]+', '+fmtOrdinal(dt.getDate())+' '+M[dt.getMonth()]+' '+dt.getFullYear();
+}
 
-function normaliseProjects(records){
+function normalise(records){
   records.forEach(function(p){
     var sr=p.Status_Reports__r&&p.Status_Reports__r.records;
     p._lastStatusReport=(sr&&sr.length)?sr[0].PSA_PM_Status_Report_Week__c:null;
@@ -104,411 +144,309 @@ function normaliseProjects(records){
     p._lastCSAT=(cs&&cs.length)?cs[0].psa_pm_Survey_Sent_Date__c:null;
     var ae=p.Adoption_Events__r&&p.Adoption_Events__r.records;
     p._hasAE=!!(ae&&ae.length);
+    p._dm=(p.pse__Project_Manager__r&&p.pse__Project_Manager__r.Name)||'—';
+    p._acct=(p.pse__Account__r&&p.pse__Account__r.Name)||'—';
+    p._prac=(p.pse__Practice__r&&p.pse__Practice__r.Name)||'—';
   });
   return records;
 }
 function isInternal(p){
   var bad=['completed','cancelled','canceled','on hold','closed','delivery complete'];
   if(bad.indexOf((p.pse__Stage__c||'').toLowerCase())!==-1) return true;
-  var prac=((p.pse__Practice__r&&p.pse__Practice__r.Name)||'').toLowerCase();
-  if(prac==='internal') return true;
-  var cat=(p.psa_pm_Project_Category__c||'').toLowerCase();
-  return cat==='productive non - billable'||cat==='internal';
+  if((p._prac||'').toLowerCase()==='internal') return true;
+  var c=(p.psa_pm_Project_Category__c||'').toLowerCase();
+  return c==='productive non - billable'||c==='internal';
 }
 function hasRecentTimecard(p){
-  if(!p.psa_tm_Last_Time_Entry_Date__c) return false;
   var d=parseDate(p.psa_tm_Last_Time_Entry_Date__c);
   return d&&daysDiff(TODAY,d)<=90;
 }
-function fmtOrdinal(d){
-  var s=['th','st','nd','rd'], v=d%100;
-  return d+(s[(v-20)%10]||s[v]||s[0]);
+function statusClass(s){
+  if(s==='Red') return 'status-red';
+  if(s==='Yellow') return 'status-yellow';
+  if(s==='Green') return 'status-green';
+  return '';
 }
-function fmtDateLong(dt){
-  var months=['January','February','March','April','May','June','July','August','September','October','November','December'];
-  var days=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-  return days[dt.getDay()]+', '+months[dt.getMonth()]+' '+fmtOrdinal(dt.getDate());
+function statusTag(s){
+  if(!s) return tag('—','');
+  if(s==='Red') return tag(s,'tag-red');
+  if(s==='Yellow') return tag(s,'tag-amber');
+  if(s==='Green') return tag(s,'tag-green');
+  return tag(s,'tag-blue');
+}
+function tag(txt,cls){ return '<span class="tag '+cls+'">'+esc(txt)+'</span>'; }
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* ═══════════════════════════════════════════════════════════
+   Build detail project table HTML
+   ═══════════════════════════════════════════════════════════ */
+function detailTable(projects, cols){
+  if(!projects.length) return '<p style="color:#94a3b8;font-size:0.85rem;padding:10px 0;">No projects in this category.</p>';
+  var colDefs={
+    project:  {h:'Project Name',     fn:function(p){ return '<strong>'+esc(p.Name)+'</strong>'; }},
+    account:  {h:'Account',          fn:function(p){ return esc(p._acct); }},
+    practice: {h:'Practice',         fn:function(p){ return esc(p._prac); }},
+    dm:       {h:'Delivery Manager', fn:function(p){ return esc(p._dm); }},
+    status:   {h:'Project Status',   fn:function(p){ return statusTag(p.pse__Project_Status__c); }},
+    enddate:  {h:'End Date',         fn:function(p){ var d=fmtDate(p.pse__End_Date__c); var raw=parseDate(p.pse__End_Date__c); var cls=raw&&raw<TODAY?'tag tag-red':''; return cls?'<span class="'+cls+'">'+esc(d)+'</span>':esc(d); }},
+    margin:   {h:'Margin %',         fn:function(p){ var m=p.PSA_PM_Margin_Percent__c; if(m==null) return '—'; return '<span class="tag '+(m<50?'tag-red':'tag-green')+'">'+m.toFixed(1)+'%</span>'; }},
+    timecard: {h:'Last Timecard',    fn:function(p){ var d=fmtDate(p.psa_tm_Last_Time_Entry_Date__c); var raw=parseDate(p.psa_tm_Last_Time_Entry_Date__c); var late=!raw||daysDiff(TODAY,raw)>30; return late?'<span class="tag tag-red">'+esc(d)+'</span>':esc(d); }},
+    hours:    {h:'Planned Hrs',      fn:function(p){ return esc(p.pse__Planned_Hours__c!=null?p.pse__Planned_Hours__c:'—'); }},
+    remaining:{h:'Hrs Remaining',    fn:function(p){ var v=p.PSA_PM_Total_Billable_Hours_Remaining__c; if(v==null) return '—'; return '<span class="tag '+(v<0?'tag-red':'tag-green')+'">'+v+'</span>'; }},
+    csat:     {h:'Last CSAT',        fn:function(p){ return esc(fmtDate(p._lastCSAT)); }},
+    report:   {h:'Last Status Rpt',  fn:function(p){ return esc(fmtDate(p._lastStatusReport)); }},
+    atrisk:   {h:'At Risk',          fn:function(p){ return p.psa_pm_At_Risk__c?'<span class="tag tag-red">Yes</span>':'<span class="tag tag-green">No</span>'; }},
+    ae:       {h:'Adoption Events',  fn:function(p){ return p._hasAE?'<span class="tag tag-green">Yes</span>':'<span class="tag tag-red">No</span>'; }},
+  };
+  var html='<table class="detail-table"><thead><tr>';
+  cols.forEach(function(c){ html+='<th>'+colDefs[c].h+'</th>'; });
+  html+='</tr></thead><tbody>';
+  projects.forEach(function(p){
+    html+='<tr>';
+    cols.forEach(function(c){ html+='<td>'+colDefs[c].fn(p)+'</td>'; });
+    html+='</tr>';
+  });
+  html+='</tbody></table>';
+  return html;
 }
 
-/* ── Build data object ────────────────────────────────────────────────── */
-function computeData(records){
+/* ═══════════════════════════════════════════════════════════
+   Build full canvas HTML
+   ═══════════════════════════════════════════════════════════ */
+function buildCanvas(records){
   var active=records.filter(function(p){ return !isInternal(p)&&hasRecentTimecard(p); });
-  var total=active.length;
+  var N=active.length;
   var oct31=new Date(Date.UTC(2026,9,31,12,0,0));
 
-  /* counts */
-  var pastEnd       = active.filter(function(p){ var d=parseDate(p.pse__End_Date__c); return d&&d<TODAY; }).length;
-  var endingOct     = active.filter(function(p){ var d=parseDate(p.pse__End_Date__c); return d&&d>=TODAY&&d<=oct31; }).length;
-  var noStatus      = active.filter(function(p){ return !p.pse__Project_Status__c; }).length;
-  var missingRpt    = active.filter(function(p){
-    if(!p._lastStatusReport) return true;
-    var d=parseDate(p._lastStatusReport); return d&&daysDiff(TODAY,d)>14;
-  }).length;
-  var redStatus     = active.filter(function(p){ return p.pse__Project_Status__c==='Red'||p.psa_Overall_Project_Status_Trend__c==='Red'; }).length;
-  var lowMargin     = active.filter(function(p){ return p.PSA_PM_Margin_Percent__c!=null&&p.PSA_PM_Margin_Percent__c<50; }).length;
-  var overBudget    = active.filter(function(p){ return p.PSA_PM_Total_Billable_Hours_Remaining__c!=null&&p.PSA_PM_Total_Billable_Hours_Remaining__c<0; }).length;
-  var zeroHours     = active.filter(function(p){ return !p.pse__Planned_Hours__c||p.pse__Planned_Hours__c===0; }).length;
-  var timecardLate  = active.filter(function(p){
-    if(!p.psa_tm_Last_Time_Entry_Date__c) return true;
-    var d=parseDate(p.psa_tm_Last_Time_Entry_Date__c); return d&&daysDiff(TODAY,d)>30;
-  }).length;
-  var missingCSAT   = active.filter(function(p){
-    if(!p._lastCSAT) return true;
-    var d=parseDate(p._lastCSAT); return !d||daysDiff(TODAY,d)>90;
-  }).length;
-  var missingAE     = active.filter(function(p){ return !p._hasAE&&!p.PSA_Adoption_Event_Not_Required_Reason__c; }).length;
-  var atRisk        = active.filter(function(p){ return p.psa_pm_At_Risk__c; }).length;
+  /* ── filtered project subsets ── */
+  var pastEnd       = active.filter(function(p){ var d=parseDate(p.pse__End_Date__c); return d&&d<TODAY; });
+  var endingOct     = active.filter(function(p){ var d=parseDate(p.pse__End_Date__c); return d&&d>=TODAY&&d<=oct31; });
+  var noStatus      = active.filter(function(p){ return !p.pse__Project_Status__c; });
+  var missingRpt    = active.filter(function(p){ if(!p._lastStatusReport) return true; var d=parseDate(p._lastStatusReport); return d&&daysDiff(TODAY,d)>14; });
+  var redStatus     = active.filter(function(p){ return p.pse__Project_Status__c==='Red'; });
+  var lowMargin     = active.filter(function(p){ return p.PSA_PM_Margin_Percent__c!=null&&p.PSA_PM_Margin_Percent__c<50; });
+  var overBudget    = active.filter(function(p){ return p.PSA_PM_Total_Billable_Hours_Remaining__c!=null&&p.PSA_PM_Total_Billable_Hours_Remaining__c<0; });
+  var zeroHours     = active.filter(function(p){ return !p.pse__Planned_Hours__c||p.pse__Planned_Hours__c===0; });
+  var timecardLate  = active.filter(function(p){ if(!p.psa_tm_Last_Time_Entry_Date__c) return true; var d=parseDate(p.psa_tm_Last_Time_Entry_Date__c); return d&&daysDiff(TODAY,d)>30; });
+  var missingCSAT   = active.filter(function(p){ if(!p._lastCSAT) return true; var d=parseDate(p._lastCSAT); return !d||daysDiff(TODAY,d)>90; });
+  var missingAE     = active.filter(function(p){ return !p._hasAE&&!p.PSA_Adoption_Event_Not_Required_Reason__c; });
+  var atRisk        = active.filter(function(p){ return p.psa_pm_At_Risk__c; });
 
-  /* practice breakdown */
-  var pracMap={};
+  /* ── practice & DM breakdown ── */
+  var pracMap={}, dmMap={};
   active.forEach(function(p){
-    var k=(p.pse__Practice__r&&p.pse__Practice__r.Name)||'Unassigned';
-    pracMap[k]=(pracMap[k]||0)+1;
+    pracMap[p._prac]=(pracMap[p._prac]||0)+1;
+    dmMap[p._dm]=(dmMap[p._dm]||0)+1;
   });
   var pracList=Object.keys(pracMap).sort(function(a,b){ return pracMap[b]-pracMap[a]; });
+  var dmList  =Object.keys(dmMap).sort(function(a,b){ return dmMap[b]-dmMap[a]; });
 
-  /* DM breakdown */
-  var dmMap={};
-  active.forEach(function(p){
-    var k=(p.pse__Project_Manager__r&&p.pse__Project_Manager__r.Name)||'Unassigned';
-    dmMap[k]=(dmMap[k]||0)+1;
-  });
-  var dmList=Object.keys(dmMap).sort(function(a,b){ return dmMap[b]-dmMap[a]; });
+  /* ── helpers ── */
+  function countClass(n,bad){ return n===0?'green':(n>=(bad||5)?'red':'amber'); }
+  function pill(items){
+    return '<ul class="bullet-list">'+items.map(function(i){ return '<li><span class="num">'+i[0]+'</span><span class="lbl">'+esc(i[1])+'</span></li>'; }).join('')+'</ul>';
+  }
+  function sumRow(num,obs,count,cls,comment){
+    return '<tr><td class="col-num">'+num+'</td><td>'+esc(obs)+'</td><td class="col-count '+cls+'">'+count+'</td><td class="col-comment">'+esc(comment)+'</td></tr>';
+  }
+  function breakdownTable(list,countMap){
+    var h='<table class="breakdown-table"><thead><tr><th>Name</th><th>Projects</th><th style="min-width:160px">% of Portfolio</th></tr></thead><tbody>';
+    list.forEach(function(k){
+      var cnt=countMap[k], pct=N?Math.round((cnt/N)*100):0;
+      h+='<tr><td>'+esc(k)+'</td><td style="text-align:center;font-weight:700">'+cnt+'</td>';
+      h+='<td><div class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:'+pct+'%"></div></div><span class="bar-pct">'+pct+'%</span></div></td></tr>';
+    });
+    return h+'</tbody></table>';
+  }
 
-  /* Red projects list */
-  var redProjects=active.filter(function(p){ return p.pse__Project_Status__c==='Red'||p.psa_pm_At_Risk__c; });
+  var dateStr=fmtLongDate(TODAY);
+  var H='';
 
-  return { total,pastEnd,endingOct,noStatus,missingRpt,redStatus,lowMargin,overBudget,
-    zeroHours,timecardLate,missingCSAT,missingAE,atRisk,
-    pracMap,pracList,dmMap,dmList,redProjects };
+  /* ── Title ── */
+  H+='<div class="doc-title">📊 GDC Project Compliance Dashboard</div>';
+  H+='<div class="doc-date">'+dateStr+'</div>';
+  H+='<hr class="doc-divider">';
+
+  /* ── Portfolio Health summary pills ── */
+  H+='<div class="section">';
+  H+='<div class="section-heading">🟢 Portfolio Health</div>';
+  H+='<div class="callout callout-blue">Active billable projects with timecard activity in last 90 days, managed by GDC Delivery Managers.</div>';
+  H+=pill([
+    [N,'Total Active Projects'],
+    [pastEnd.length,'Past End Date'],
+    [endingOct.length,'Ending by Oct 2026'],
+    [redStatus.length,'Red Status'],
+    [atRisk.length,'At Risk']
+  ]);
+  H+='</div>';
+
+  /* ── Immediate Actions ── */
+  H+='<div class="section">';
+  H+='<div class="section-heading">⚠️ Immediate Actions</div>';
+  H+=pill([
+    [noStatus.length,'No Status Updated'],
+    [missingRpt.length,'Missing Status Reports'],
+    [missingCSAT.length,'Missing CSAT']
+  ]);
+  H+='</div>';
+
+  /* ── Financial Risks ── */
+  H+='<div class="section">';
+  H+='<div class="section-heading">💰 Financial Risks</div>';
+  H+=pill([
+    [lowMargin.length,'Low Margin (<50%)'],
+    [overBudget.length,'Over Billed'],
+    [zeroHours.length,'Zero Planned Hours']
+  ]);
+  H+='</div>';
+
+  H+='<hr class="doc-divider">';
+
+  /* ── Portfolio Summary table ── */
+  H+='<div class="section">';
+  H+='<div class="section-heading">🔢 Portfolio Summary</div>';
+  H+='<div class="callout callout-green">Compliance metrics are calculated against '+N+' total active projects. Green = all clear, Amber = needs attention, Red = action required.</div>';
+  H+='<table class="summary-table"><thead><tr><th class="col-num">#</th><th>Observation</th><th class="col-count">Count</th><th>Comment</th></tr></thead><tbody>';
+  H+=sumRow(1,'Total Active Projects',N,'green','Baseline — 100%');
+  H+=sumRow(2,'Projects with No Status',noStatus.length,countClass(noStatus.length,3),noStatus.length>0?'Action required — update project status':'All projects have status set');
+  H+=sumRow(3,'Missing Status Reports (>14 days)',missingRpt.length,countClass(missingRpt.length,3),missingRpt.length>0?'Status report overdue — follow up with DM':'All reports filed on time');
+  H+=sumRow(4,'Projects in Red Status',redStatus.length,countClass(redStatus.length,2),redStatus.length>0?'Needs immediate attention':'No red projects');
+  H+=sumRow(5,'Active Projects Past End Date',pastEnd.length,countClass(pastEnd.length,3),pastEnd.length>0?'End date extension or closure needed':'All within end date');
+  H+=sumRow(6,'Upcoming End Dates (by Oct 2026)',endingOct.length,'amber','Plan for closure or extension');
+  H+=sumRow(7,'Low Margin Projects (<50%)',lowMargin.length,countClass(lowMargin.length,3),lowMargin.length>0?'Finance review needed':'All margins healthy');
+  H+=sumRow(8,'Timecard Last Filled >30 Days',timecardLate.length,countClass(timecardLate.length,3),timecardLate.length>0?'Follow up with DM':'Timecards up to date');
+  H+=sumRow(9,'Zero Planned Hours',zeroHours.length,countClass(zeroHours.length,2),zeroHours.length>0?'Update project plan in PSA':'All projects have planned hours');
+  H+=sumRow(10,'Over Billed (Negative Hours Remaining)',overBudget.length,countClass(overBudget.length,2),overBudget.length>0?'SOW amendment may be needed':'All within budget');
+  H+=sumRow(11,'Missing CSAT Survey (>90 days)',missingCSAT.length,countClass(missingCSAT.length,3),missingCSAT.length>0?'Send CSAT survey to customer':'CSAT up to date');
+  H+=sumRow(12,'Missing Adoption Events',missingAE.length,countClass(missingAE.length,3),missingAE.length>0?'Create AE record or add exemption reason':'All covered');
+  H+=sumRow(13,'At Risk Projects',atRisk.length,countClass(atRisk.length,2),atRisk.length>0?'Review risk register with DM':'No at-risk projects');
+  H+='</tbody></table>';
+  H+='</div>';
+
+  H+='<hr class="doc-divider">';
+
+  /* ── Detailed sections — each with full project table ── */
+  function detailSection(id,icon,title,calloutCls,calloutText,projects,cols){
+    return '<div class="section" id="'+id+'">'+
+      '<div class="section-heading">'+icon+' '+esc(title)+' <span style="font-size:0.85rem;font-weight:500;color:#64748b;">('+projects.length+' projects)</span></div>'+
+      '<div class="callout '+calloutCls+'">'+esc(calloutText)+'</div>'+
+      detailTable(projects,cols)+
+      '</div>';
+  }
+
+  H+=detailSection('sec-nostatus','⚪','Projects with No Status','callout-yellow',
+    'These projects have no overall project status set. DM to update immediately.',
+    noStatus,['project','account','practice','dm','enddate','report']);
+
+  H+='<hr class="doc-divider">';
+
+  H+=detailSection('sec-missingrpt','📄','Missing Status Reports','callout-yellow',
+    'Status report not filed in last 14 days. DM to file update immediately.',
+    missingRpt,['project','account','practice','dm','report','status']);
+
+  H+='<hr class="doc-divider">';
+
+  H+=detailSection('sec-red','🔴','Red Status Projects','callout-red',
+    'Projects currently flagged as Red. Immediate escalation and remediation plan required.',
+    redStatus,['project','account','practice','dm','status','enddate','margin','atrisk']);
+
+  H+='<hr class="doc-divider">';
+
+  H+=detailSection('sec-pastend','📅','Projects Past End Date','callout-red',
+    'Active projects whose end date has already passed. Require immediate closure or extension.',
+    pastEnd,['project','account','practice','dm','enddate','status','hours','remaining']);
+
+  H+='<hr class="doc-divider">';
+
+  H+=detailSection('sec-endingoct','⏳','Projects Ending by Oct 2026','callout-yellow',
+    'Projects with end date on or before 31 Oct 2026. Plan for extension or closure.',
+    endingOct,['project','account','practice','dm','enddate','status','hours','remaining']);
+
+  H+='<hr class="doc-divider">';
+
+  H+=detailSection('sec-lowmargin','💸','Low Margin Projects (<50%)','callout-red',
+    'Projects with margin below 50%. Finance review and corrective action may be required.',
+    lowMargin,['project','account','practice','dm','margin','status','enddate']);
+
+  H+='<hr class="doc-divider">';
+
+  H+=detailSection('sec-timecard','🕐','Timecard Last Filled >30 Days','callout-yellow',
+    'Projects where the last timecard entry is more than 30 days ago. DM to follow up with resources.',
+    timecardLate,['project','account','practice','dm','timecard','status']);
+
+  H+='<hr class="doc-divider">';
+
+  H+=detailSection('sec-zerohours','⏱️','Zero Planned Hours','callout-yellow',
+    'Projects with no planned hours entered in PSA. Project plan needs to be updated.',
+    zeroHours,['project','account','practice','dm','hours','status','enddate']);
+
+  H+='<hr class="doc-divider">';
+
+  H+=detailSection('sec-overbudget','⚠️','Over Billed — Negative Hours Remaining','callout-red',
+    'Projects where billed hours exceed planned hours. SOW amendment or resource adjustment needed.',
+    overBudget,['project','account','practice','dm','hours','remaining','margin','status']);
+
+  H+='<hr class="doc-divider">';
+
+  H+=detailSection('sec-csat','⭐','Missing CSAT Survey (>90 days)','callout-yellow',
+    'No CSAT survey sent in last 90 days. Send survey to customer contact.',
+    missingCSAT,['project','account','practice','dm','csat','status','enddate']);
+
+  H+='<hr class="doc-divider">';
+
+  H+=detailSection('sec-ae','🎯','Missing Adoption Events','callout-yellow',
+    'No Adoption Event record created and no exemption reason provided.',
+    missingAE,['project','account','practice','dm','status','enddate','ae']);
+
+  H+='<hr class="doc-divider">';
+
+  H+=detailSection('sec-atrisk','🚨','At Risk Projects','callout-red',
+    'Projects flagged as At Risk. DM to review risk register and provide mitigation plan.',
+    atRisk,['project','account','practice','dm','status','enddate','margin','atrisk']);
+
+  H+='<hr class="doc-divider">';
+
+  /* ── Practice breakdown ── */
+  H+='<div class="section"><div class="section-heading">🏢 Projects by Practice</div>';
+  H+=breakdownTable(pracList,pracMap);
+  H+='</div>';
+
+  H+='<hr class="doc-divider">';
+
+  /* ── DM breakdown ── */
+  H+='<div class="section"><div class="section-heading">👤 Projects by Delivery Manager</div>';
+  H+=breakdownTable(dmList,dmMap);
+  H+='</div>';
+
+  /* ── Footer ── */
+  H+='<div class="doc-footer"><span>Live Dashboard: <a href="https://gdc-project-compliance-dashboard.onrender.com">gdc-project-compliance-dashboard.onrender.com</a></span><span>Data from Salesforce PSA &nbsp;·&nbsp; Generated '+dateStr+'</span></div>';
+
+  return H;
 }
 
-/* ── Render HTML preview (mirrors Slack canvas visual format) ─────────── */
-function renderPreview(d, dateStr){
-  var el=document.getElementById('canvas-preview');
-
-  /* helper to create elements */
-  function el2(tag,cls,txt){
-    var e=document.createElement(tag);
-    if(cls) e.className=cls;
-    if(txt!=null) e.textContent=txt;
-    return e;
-  }
-  function heading(icon,text){
-    var h=el2('div','c-section-heading');
-    h.textContent=icon+' '+text;
-    return h;
-  }
-  function bulletList(items){
-    var ul=document.createElement('ul');
-    items.forEach(function(item){
-      var li=document.createElement('li');
-      li.textContent=item;
-      ul.appendChild(li);
-    });
-    return ul;
-  }
-  function tableRow(cells){
-    var tr=document.createElement('tr');
-    cells.forEach(function(c,i){
-      var td=document.createElement('td');
-      td.textContent=c.text;
-      if(c.cls) td.className=c.cls;
-      tr.appendChild(td);
-    });
-    return tr;
-  }
-
-  el.innerHTML='';
-
-  /* Title */
-  var title=el2('div','c-title','GDC Project Compliance Dashboard');
-  el.appendChild(title);
-  el.appendChild(el2('div','c-lastupdated','Last Updated: '+dateStr));
-  el.appendChild(document.createElement('hr'));
-
-  /* Section 1: Portfolio Health */
-  var s1=el2('div','c-section');
-  s1.appendChild(heading('🟢','Portfolio Health'));
-  s1.appendChild(bulletList([
-    d.total+' Active Projects',
-    d.pastEnd+' Past End Date',
-    d.endingOct+' Upcoming End Dates (by Oct 2026)'
-  ]));
-  el.appendChild(s1);
-
-  /* Section 2: Immediate Actions */
-  var s2=el2('div','c-section');
-  s2.appendChild(heading('⚠️','Immediate Actions'));
-  s2.appendChild(bulletList([
-    d.noStatus+' Blank Status',
-    d.missingRpt+' Missing Reports',
-    d.missingCSAT+' Missing CSAT'
-  ]));
-  el.appendChild(s2);
-
-  /* Section 3: Financial Risks */
-  var s3=el2('div','c-section');
-  s3.appendChild(heading('💰','Financial Risks'));
-  s3.appendChild(bulletList([
-    d.lowMargin+' Low Margin (<50%)',
-    d.overBudget+' Over Billed',
-    d.zeroHours+' Zero Planned Hours'
-  ]));
-  el.appendChild(s3);
-
-  el.appendChild(document.createElement('hr'));
-
-  /* Section 4: Portfolio Summary — table */
-  var s4=el2('div','c-section');
-  s4.appendChild(heading('🔢','Portfolio Summary'));
-
-  var callout=el2('div','c-callout',
-    'This report covers active billable projects with timecard activity in the last 90 days. '+
-    'Compliance metrics are calculated against the total active project count.');
-  s4.appendChild(callout);
-
-  var tableRows=[
-    [1, 'Total Active Projects',                    d.total,        '100% baseline'],
-    [2, 'Projects with No Status',                  d.noStatus,     d.noStatus>0?'Action required':''],
-    [3, 'Projects with Missing Status Reports',     d.missingRpt,   d.missingRpt>0?'Report overdue >14 days':''],
-    [4, 'Projects in Red Status',                   d.redStatus,    d.redStatus>0?'Needs immediate attention':''],
-    [5, 'Active Projects Past End Date',            d.pastEnd,      d.pastEnd>0?'End date extension needed':''],
-    [6, 'Upcoming Project End Dates (Oct 2026)',    d.endingOct,    'Plan for closure/extension'],
-    [7, 'Low Margin Projects (<50%)',               d.lowMargin,    d.lowMargin>0?'Finance review needed':''],
-    [8, 'Last Timecard >30 Days',                   d.timecardLate, d.timecardLate>0?'Follow up with DM':''],
-    [9, 'Zero Planned Hours',                       d.zeroHours,    d.zeroHours>0?'Update project plan':''],
-    [10,'Over Billed (Negative Hours Remaining)',   d.overBudget,   d.overBudget>0?'SOW amendment may be needed':''],
-    [11,'Missing CSAT Survey (>90 days)',           d.missingCSAT,  d.missingCSAT>0?'Send survey':''],
-    [12,'Missing Adoption Events',                  d.missingAE,    d.missingAE>0?'Create AE or add exemption':''],
-    [13,'At Risk Projects',                         d.atRisk,       d.atRisk>0?'Review risk register':''],
-  ];
-
-  var tbl=document.createElement('table'); tbl.className='c-table';
-  var thead=document.createElement('thead');
-  var hrow=document.createElement('tr');
-  ['#','Observation','Count','Comment'].forEach(function(h){
-    var th=document.createElement('th'); th.textContent=h; hrow.appendChild(th);
-  });
-  thead.appendChild(hrow); tbl.appendChild(thead);
-  var tbody=document.createElement('tbody');
-  tableRows.forEach(function(r){
-    tbody.appendChild(tableRow([
-      {text:r[0]},
-      {text:r[1]},
-      {text:r[2], cls:'count'},
-      {text:r[3], cls:'comment'}
-    ]));
-  });
-  tbl.appendChild(tbody);
-  s4.appendChild(tbl);
-  el.appendChild(s4);
-
-  el.appendChild(document.createElement('hr'));
-
-  /* Section 5: Practice Breakdown */
-  var s5=el2('div','c-section');
-  s5.appendChild(heading('🏢','Projects by Practice'));
-  var ptbl=document.createElement('table'); ptbl.className='c-table';
-  var pt=document.createElement('thead'); var ptr=document.createElement('tr');
-  ['Practice','Projects','% of Portfolio'].forEach(function(h){ var th=document.createElement('th'); th.textContent=h; ptr.appendChild(th); });
-  pt.appendChild(ptr); ptbl.appendChild(pt);
-  var pb=document.createElement('tbody');
-  d.pracList.forEach(function(prac){
-    var cnt=d.pracMap[prac];
-    var pct=d.total?Math.round((cnt/d.total)*100):0;
-    var tr=document.createElement('tr');
-    [{text:prac},{text:cnt,cls:'count'},{text:pct+'%',cls:'count'}].forEach(function(c){
-      var td=document.createElement('td'); td.textContent=c.text; if(c.cls) td.className=c.cls; tr.appendChild(td);
-    });
-    pb.appendChild(tr);
-  });
-  ptbl.appendChild(pb); s5.appendChild(ptbl);
-  el.appendChild(s5);
-
-  el.appendChild(document.createElement('hr'));
-
-  /* Section 6: DM Breakdown */
-  var s6=el2('div','c-section');
-  s6.appendChild(heading('👤','Projects by Delivery Manager'));
-  var dtbl=document.createElement('table'); dtbl.className='c-table';
-  var dt=document.createElement('thead'); var dtr=document.createElement('tr');
-  ['Delivery Manager','Projects'].forEach(function(h){ var th=document.createElement('th'); th.textContent=h; dtr.appendChild(th); });
-  dt.appendChild(dtr); dtbl.appendChild(dt);
-  var db=document.createElement('tbody');
-  d.dmList.forEach(function(dm){
-    var tr=document.createElement('tr');
-    [{text:dm},{text:d.dmMap[dm],cls:'count'}].forEach(function(c){
-      var td=document.createElement('td'); td.textContent=c.text; if(c.cls) td.className=c.cls; tr.appendChild(td);
-    });
-    db.appendChild(tr);
-  });
-  dtbl.appendChild(db); s6.appendChild(dtbl);
-  el.appendChild(s6);
-
-  /* Section 7: Red/At-risk */
-  if(d.redProjects.length>0){
-    el.appendChild(document.createElement('hr'));
-    var s7=el2('div','c-section');
-    s7.appendChild(heading('🚨','Red / At-Risk Projects ('+d.redProjects.length+')'));
-    var rtbl=document.createElement('table'); rtbl.className='c-table';
-    var rt=document.createElement('thead'); var rtr=document.createElement('tr');
-    ['Project','Account','Status','At Risk'].forEach(function(h){ var th=document.createElement('th'); th.textContent=h; rtr.appendChild(th); });
-    rt.appendChild(rtr); rtbl.appendChild(rt);
-    var rb=document.createElement('tbody');
-    d.redProjects.forEach(function(p){
-      var tr=document.createElement('tr');
-      [
-        {text:p.Name||''},
-        {text:(p.pse__Account__r&&p.pse__Account__r.Name)||''},
-        {text:p.pse__Project_Status__c||'—'},
-        {text:p.psa_pm_At_Risk__c?'Yes':'No'}
-      ].forEach(function(c){
-        var td=document.createElement('td'); td.textContent=c.text; tr.appendChild(td);
-      });
-      rb.appendChild(tr);
-    });
-    rtbl.appendChild(rb); s7.appendChild(rtbl);
-    el.appendChild(s7);
-  }
-
-  /* Footer */
-  el.appendChild(document.createElement('hr'));
-  var footer=el2('div','','');
-  footer.style.cssText='font-size:0.78rem;color:#94a3b8;text-align:center;margin-top:8px;';
-  footer.textContent='Live Dashboard: https://gdc-project-compliance-dashboard.onrender.com  |  Data from Salesforce PSA  |  Generated '+dateStr;
-  el.appendChild(footer);
-}
-
-/* ── Build plain text for clipboard ──────────────────────────────────── */
-function buildPlainText(d, dateStr){
-  var L=[];
-  function sec(icon,title){ L.push(''); L.push(icon+' '+title); L.push('─'.repeat(40)); }
-
-  L.push('GDC Project Compliance Dashboard');
-  L.push('Last Updated: '+dateStr);
-  L.push('');
-
-  sec('🟢','Portfolio Health');
-  L.push('• '+d.total+' Active Projects');
-  L.push('• '+d.pastEnd+' Past End Date');
-  L.push('• '+d.endingOct+' Upcoming End Dates (by Oct 2026)');
-
-  sec('⚠️','Immediate Actions');
-  L.push('• '+d.noStatus+' Blank Status');
-  L.push('• '+d.missingRpt+' Missing Reports');
-  L.push('• '+d.missingCSAT+' Missing CSAT');
-
-  sec('💰','Financial Risks');
-  L.push('• '+d.lowMargin+' Low Margin (<50%)');
-  L.push('• '+d.overBudget+' Over Billed');
-  L.push('• '+d.zeroHours+' Zero Planned Hours');
-
-  sec('🔢','Portfolio Summary');
-  L.push('');
-  function pad(s,n){ s=String(s); while(s.length<n) s+=' '; return s; }
-  L.push(pad('#',4)+pad('Observation',46)+pad('Count',8)+'Comment');
-  L.push('─'.repeat(80));
-  var rows=[
-    [1,'Total Active Projects',                   d.total,        '100% baseline'],
-    [2,'Projects with No Status',                 d.noStatus,     d.noStatus>0?'Action required':'✓'],
-    [3,'Projects with Missing Status Reports',    d.missingRpt,   d.missingRpt>0?'Report overdue >14 days':'✓'],
-    [4,'Projects in Red Status',                  d.redStatus,    d.redStatus>0?'Needs immediate attention':'✓'],
-    [5,'Active Projects Past End Date',           d.pastEnd,      d.pastEnd>0?'End date extension needed':'✓'],
-    [6,'Upcoming End Dates (Oct 2026)',           d.endingOct,    'Plan for closure/extension'],
-    [7,'Low Margin Projects (<50%)',              d.lowMargin,    d.lowMargin>0?'Finance review needed':'✓'],
-    [8,'Last Timecard >30 Days',                  d.timecardLate, d.timecardLate>0?'Follow up with DM':'✓'],
-    [9,'Zero Planned Hours',                      d.zeroHours,    d.zeroHours>0?'Update project plan':'✓'],
-    [10,'Over Billed (Negative Hours Remaining)', d.overBudget,   d.overBudget>0?'SOW amendment may be needed':'✓'],
-    [11,'Missing CSAT Survey (>90 days)',         d.missingCSAT,  d.missingCSAT>0?'Send survey':'✓'],
-    [12,'Missing Adoption Events',                d.missingAE,    d.missingAE>0?'Create AE or add exemption':'✓'],
-    [13,'At Risk Projects',                       d.atRisk,       d.atRisk>0?'Review risk register':'✓'],
-  ];
-  rows.forEach(function(r){ L.push(pad(r[0],4)+pad(r[1],46)+pad(r[2],8)+r[3]); });
-
-  sec('🏢','Projects by Practice');
-  L.push('');
-  L.push(pad('Practice',36)+pad('Projects',10)+'% of Portfolio');
-  L.push('─'.repeat(60));
-  d.pracList.forEach(function(prac){
-    var cnt=d.pracMap[prac], pct=d.total?Math.round((cnt/d.total)*100):0;
-    L.push(pad(prac,36)+pad(cnt,10)+pct+'%');
-  });
-
-  sec('👤','Projects by Delivery Manager');
-  L.push('');
-  L.push(pad('Delivery Manager',36)+'Projects');
-  L.push('─'.repeat(50));
-  d.dmList.forEach(function(dm){ L.push(pad(dm,36)+d.dmMap[dm]); });
-
-  if(d.redProjects.length>0){
-    sec('🚨','Red / At-Risk Projects ('+d.redProjects.length+')');
-    L.push('');
-    L.push(pad('Project',36)+pad('Account',26)+pad('Status',12)+'At Risk');
-    L.push('─'.repeat(80));
-    d.redProjects.forEach(function(p){
-      L.push(pad(p.Name||'',36)+pad((p.pse__Account__r&&p.pse__Account__r.Name)||'',26)+pad(p.pse__Project_Status__c||'—',12)+(p.psa_pm_At_Risk__c?'Yes':'No'));
-    });
-  }
-
-  L.push('');
-  L.push('─'.repeat(80));
-  L.push('Live Dashboard: https://gdc-project-compliance-dashboard.onrender.com');
-  L.push('Data from Salesforce PSA | Generated '+dateStr);
-
-  return L.join('\n');
-}
-
-/* ── Fetch and render ─────────────────────────────────────────────────── */
-var plainText='';
-
-function setStatus(msg,color){
-  var el=document.getElementById('status');
-  el.textContent=msg; el.style.color=color||'#64748b';
-}
+/* ═══════════════════════════════════════════════════════════
+   Fetch + render
+   ═══════════════════════════════════════════════════════════ */
+function setStatus(msg,color){ var el=document.getElementById('status'); el.textContent=msg; el.style.color=color||'#64748b'; }
 
 function generate(){
   var btn=document.getElementById('gen-btn');
   btn.disabled=true;
   setStatus('Fetching live data from Salesforce...','#0176d3');
-
   fetch('/api/projects')
     .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
     .then(function(data){
       if(data.error) throw new Error(data.error);
-      var records=normaliseProjects(data.records||[]);
-      if(!records.length) throw new Error('0 projects returned — check SF token at /admin');
-      var d=computeData(records);
-      var dateStr=fmtDateLong(TODAY);
-      renderPreview(d, dateStr);
-      plainText=buildPlainText(d, dateStr);
-      document.getElementById('preview-wrap').style.display='block';
-      document.getElementById('copy-btn').style.display='inline-flex';
+      var records=normalise(data.records||[]);
+      if(!records.length) throw new Error('0 projects — check SF token at /admin');
+      var doc=document.getElementById('canvas-doc');
+      doc.innerHTML=buildCanvas(records);
+      doc.style.display='block';
+      document.getElementById('print-btn').style.display='inline-flex';
       btn.disabled=false;
-      setStatus('Ready — '+records.length+' projects loaded. Click Copy to paste into Slack.','#16a34a');
+      setStatus('Canvas ready with '+records.length+' projects. Use Save as PDF to share.','#16a34a');
     })
-    .catch(function(e){
-      btn.disabled=false;
-      setStatus('Error: '+e.message,'#dc2626');
-    });
-}
-
-function copyCanvas(){
-  var ta=document.getElementById('copy-area');
-  ta.value=plainText; ta.select();
-  var btn=document.getElementById('copy-btn');
-  try {
-    if(navigator.clipboard){
-      navigator.clipboard.writeText(plainText).then(function(){
-        btn.textContent='Copied!';
-        setTimeout(function(){ btn.textContent='Copy Plain Text for Slack'; },2500);
-      });
-    } else {
-      document.execCommand('copy');
-      btn.textContent='Copied!';
-      setTimeout(function(){ btn.textContent='Copy Plain Text for Slack'; },2500);
-    }
-  } catch(e){ alert('Copy failed — please manually copy from the preview area.'); }
+    .catch(function(e){ btn.disabled=false; setStatus('Error: '+e.message,'#dc2626'); });
 }
 </script>
 </body>
