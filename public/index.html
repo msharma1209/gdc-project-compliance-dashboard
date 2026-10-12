@@ -1671,22 +1671,34 @@ function init(){
   });
 
   // ── Tab switching ──
+  function switchTab(tabName) {
+    document.querySelectorAll('.main-tab-btn').forEach(function(b){ b.classList.remove('active'); });
+    document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
+    var btn = document.querySelector('.main-tab-btn[data-tab="'+tabName+'"]');
+    if (btn) btn.classList.add('active');
+    var panel = document.getElementById('tab-'+tabName);
+    if (panel) panel.classList.add('active');
+    if (tabName === 'analytics') {
+      if(state.charts.doughnut) state.charts.doughnut.resize();
+      if(state.charts.practice) state.charts.practice.resize();
+      if(state.charts.billing)  state.charts.billing.resize();
+      if(state.charts.health)   state.charts.health.resize();
+      if(state.charts.dm)       state.charts.dm.resize();
+    }
+    try { localStorage.setItem('gdc_active_tab', tabName); } catch(e) {}
+  }
+
   document.querySelectorAll('.main-tab-btn').forEach(function(btn){
     btn.addEventListener('click', function(){
-      document.querySelectorAll('.main-tab-btn').forEach(function(b){ b.classList.remove('active'); });
-      document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
-      btn.classList.add('active');
-      document.getElementById('tab-'+btn.getAttribute('data-tab')).classList.add('active');
-      // Resize charts when Analytics tab becomes visible (canvas needs re-render)
-      if(btn.getAttribute('data-tab')==='analytics'){
-        if(state.charts.doughnut) state.charts.doughnut.resize();
-        if(state.charts.practice) state.charts.practice.resize();
-        if(state.charts.billing)  state.charts.billing.resize();
-        if(state.charts.health)   state.charts.health.resize();
-        if(state.charts.dm)       state.charts.dm.resize();
-      }
+      switchTab(btn.getAttribute('data-tab'));
     });
   });
+
+  // Restore last active tab (persists across refresh)
+  try {
+    var savedTab = localStorage.getItem('gdc_active_tab');
+    if (savedTab) switchTab(savedTab);
+  } catch(e) {}
 
   document.getElementById('search-box').addEventListener('input',function(e){
     state.searchQuery=e.target.value; applySearchFilter(); applySort(state.displayed,state.sortCol,state.sortDir); renderMainTableBody();
