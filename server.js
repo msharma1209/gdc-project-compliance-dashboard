@@ -438,6 +438,62 @@ function handleRecordTypes(res) {
   });
 }
 
+// ── /api/debug-milestones — raw query for diagnosis ──────────────────────────
+// Runs: pse__Milestone__c where Status != Complete AND TargetDate in next 30 days
+// Returns full raw records so we can see RecordType.Name, Practice, Status etc.
+function handleDebugMilestones(res) {
+  if (!tokenCache.accessToken) {
+    res.writeHead(503, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'No SF token set.' }));
+    return;
+  }
+  var today = new Date();
+  var in30  = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
+  function pad(n) { return n < 10 ? '0' + n : '' + n; }
+  function fmtDate(d) { return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()); }
+
+  // Your exact query + extra fields so we can see what's there
+  var soql =
+    "SELECT Id, Name, pse__Status__c, pse__Target_Date__c, RecordType.Name, RecordTypeId, " +
+    "pse__Include_In_Financials__c, " +
+    "pse__Project__r.Name, pse__Project__r.pse__Practice__r.Name " +
+    "FROM pse__Milestone__c " +
+    "WHERE pse__Status__c != 'Complete' " +
+    "AND pse__Target_Date__c >= " + fmtDate(today) + " " +
+    "AND pse__Target_Date__c <= " + fmtDate(in30) + " " +
+    "AND pse__Project__r.pse__Practice__r.Name = 'Consulting Services' " +
+    "ORDER BY pse__Target_Date__c ASC LIMIT 200";
+
+  fetchSOQL(soql, tokenCache.accessToken, tokenCache.instanceUrl, function(err, data) {
+    if (err) {
+      res.writeHead(502, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: err.message, soql: soql }));
+      return;
+    }
+    // Return pretty JSON with the SOQL used, total count, and all records
+    var out = {
+      soql: soql,
+      totalSize: (data.records || []).length,
+      records: (data.records || []).map(function(m) {
+        return {
+          Id:                        m.Id,
+          Name:                      m.Name,
+          Status:                    m.pse__Status__c,
+          TargetDate:                m.pse__Target_Date__c,
+          RecordTypeName:            m.RecordType ? m.RecordType.Name : null,
+          RecordTypeId:              m.RecordTypeId,
+          IncludeInFinancials:       m.pse__Include_In_Financials__c,
+          ProjectName:               m.pse__Project__r ? m.pse__Project__r.Name : null,
+          Practice:                  m.pse__Project__r && m.pse__Project__r.pse__Practice__r
+                                       ? m.pse__Project__r.pse__Practice__r.Name : null
+        };
+      })
+    };
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+    res.end(JSON.stringify(out, null, 2));
+  });
+}
+
 // ── Static file serving from public/ ─────────────────────────────────────────
 function handleStatic(reqPath, res) {
   if (reqPath === '/' || reqPath === '') reqPath = '/index.html';
@@ -495,6 +551,8 @@ var server = http.createServer(function (req, res) {
     handleApiProjects(res);
   } else if (reqPath === '/api/milestones') {
     handleMilestones(res);
+  } else if (reqPath === '/api/debug-milestones') {
+    handleDebugMilestones(res);
   } else if (reqPath === '/api/record-types') {
     handleRecordTypes(res);
   } else if (reqPath === '/api/lookup-dms') {
