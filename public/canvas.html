@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GDC Canvas Export</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpolygon points='32,2 62,22 62,42 32,62 2,42 2,22' fill='%23FF4D00'/%3E%3C/svg%3E">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f4ff;min-height:100vh;padding:24px;}
+.header{display:flex;align-items:center;gap:16px;margin-bottom:24px;flex-wrap:wrap;}
+.header h1{font-size:1.2rem;font-weight:700;color:#0a1f44;}
+.header a{font-size:0.82rem;color:#0176d3;text-decoration:none;}
+.header a:hover{text-decoration:underline;}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 20px;border-radius:24px;font-size:0.88rem;font-weight:700;cursor:pointer;border:none;transition:background 0.15s;}
+.btn-primary{background:#0176d3;color:#fff;}
+.btn-primary:hover{background:#0156a3;}
+.btn-primary:disabled{opacity:0.5;cursor:not-allowed;}
+.btn-copy{background:#16a34a;color:#fff;}
+.btn-copy:hover{background:#15803d;}
+.btn-copy.copied{background:#6366f1;}
+.actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+#status{font-size:0.82rem;color:#64748b;font-style:italic;}
+.card{background:#fff;border-radius:16px;box-shadow:0 2px 12px rgba(30,80,160,0.08);padding:28px;margin-bottom:20px;}
+#preview-wrap{display:none;}
+#preview{font-family:monospace;font-size:13px;line-height:1.7;color:#1e293b;white-space:pre;background:#fafafa;border:1px solid #e2e8f0;border-radius:12px;padding:24px;max-height:600px;overflow:auto;}
+.steps{display:flex;flex-direction:column;gap:12px;margin-top:16px;}
+.step{display:flex;gap:12px;align-items:flex-start;}
+.step-num{flex-shrink:0;width:28px;height:28px;border-radius:50%;background:#0176d3;color:#fff;font-size:0.78rem;font-weight:700;display:flex;align-items:center;justify-content:center;}
+.step-text{font-size:0.88rem;color:#334155;line-height:1.5;padding-top:4px;}
+.step-text b{color:#0a1f44;}
+kbd{display:inline-block;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:4px;padding:1px 6px;font-size:0.8rem;font-family:monospace;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <a href="/">&#8592; Back to Dashboard</a>
+  <h1>&#128203; Slack Canvas Export</h1>
+</div>
+
+<div class="card">
+  <div class="actions">
+    <button class="btn btn-primary" id="gen-btn" onclick="generate()">&#9889; Generate Canvas from Live Data</button>
+    <button class="btn btn-copy" id="copy-btn" onclick="copyCanvas()" style="display:none">&#128203; Copy to Clipboard</button>
+    <span id="status">Click Generate to fetch latest data from Salesforce.</span>
+  </div>
+</div>
+
+<div class="card" id="preview-wrap">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+    <div style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#64748b;">Canvas Preview</div>
+  </div>
+  <pre id="preview"></pre>
+</div>
+
+<div class="card">
+  <div style="font-size:0.82rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#64748b;margin-bottom:14px;">How to paste into Slack Canvas</div>
+  <div class="steps">
+    <div class="step"><div class="step-num">1</div><div class="step-text">Click <b>Generate Canvas from Live Data</b> above to fetch fresh numbers from Salesforce.</div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-text">Click <b>Copy to Clipboard</b>.</div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-text">Open your Slack canvas. Click inside the canvas body, press <kbd>Ctrl+A</kbd> to select all existing content, then <kbd>Delete</kbd> to clear it.</div></div>
+    <div class="step"><div class="step-num">4</div><div class="step-text">Press <kbd>Ctrl+V</kbd> to paste. Slack renders headings, bullets and tables automatically.</div></div>
+  </div>
+</div>
+
+<script>
+var canvasText = '';
+
+function setStatus(msg, color) {
+  var el = document.getElementById('status');
+  el.textContent = msg;
+  el.style.color = color || '#64748b';
+}
+
+function generate() {
+  var btn = document.getElementById('gen-btn');
+  btn.disabled = true;
+  setStatus('Fetching live data from Salesforce...', '#0176d3');
+
+  fetch('/api/canvas-data')
+    .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+    .then(function(d){
+      if(d.error) throw new Error(d.error);
+      canvasText = buildCanvas(d);
+      document.getElementById('preview').textContent = canvasText;
+      document.getElementById('preview-wrap').style.display = 'block';
+      document.getElementById('copy-btn').style.display = 'inline-flex';
+      btn.disabled = false;
+      setStatus('Generated from live Salesforce data as of ' + d.date + '. Click Copy to paste into Slack.', '#16a34a');
+    })
+    .catch(function(e){
+      btn.disabled = false;
+      setStatus('Error: ' + e.message + ' — make sure the SF token is set at /admin.', '#dc2626');
+    });
+}
+
+function copyCanvas() {
+  if(!canvasText) return;
+  var btn = document.getElementById('copy-btn');
+  navigator.clipboard.writeText(canvasText).then(function(){
+    btn.classList.add('copied');
+    btn.textContent = 'Copied!';
+    setTimeout(function(){ btn.classList.remove('copied'); btn.textContent = 'Copy to Clipboard'; }, 2500);
+  }).catch(function(){
+    // Fallback for older browsers
+    var ta = document.createElement('textarea');
+    ta.value = canvasText;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    btn.textContent = 'Copied!';
+    setTimeout(function(){ btn.textContent = 'Copy to Clipboard'; }, 2500);
+  });
+}
+
+function bar(pct) {
+  var filled = Math.round(pct / 10);
+  var empty  = 10 - filled;
+  var b = '';
+  for(var i=0;i<filled;i++) b += '█';
+  for(var j=0;j<empty;j++)  b += '░';
+  return b + ' ' + pct + '%';
+}
+
+function padR(s, n){ s=String(s); while(s.length<n) s+=' '; return s.slice(0,n); }
+function padL(s, n){ s=String(s); while(s.length<n) s=' '+s; return s; }
+
+function buildCanvas(d) {
+  var L = [];
+  var SEP = '━'.repeat(46);
+
+  // Title
+  L.push('GDC Informatica Practice — Project Compliance Dashboard');
+  L.push('📅 ' + d.date);
+  L.push('');
+
+  // Summary
+  L.push(SEP);
+  L.push('📊  SUMMARY');
+  L.push(SEP);
+  L.push('');
+  L.push('Total Active Projects         : ' + d.total);
+  L.push('Projects Ending by Oct 2026   : ' + d.endingOct);
+  L.push('Projects At Risk / Red Status : ' + d.reds.length);
+  L.push('');
+
+  // KPI Compliance
+  L.push(SEP);
+  L.push('✅  COMPLIANCE SCORECARD  (out of ' + d.total + ' active projects)');
+  L.push(SEP);
+  L.push('');
+  L.push(padR('KPI', 34) + padR('Compliant', 12) + 'Progress');
+  L.push('─'.repeat(70));
+  d.kpis.forEach(function(k){
+    L.push(padR(k.icon + ' ' + k.label, 34) + padR(k.compliant + '/' + k.total, 12) + bar(k.pct));
+  });
+  L.push('');
+
+  // Practice breakdown
+  L.push(SEP);
+  L.push('🏢  PROJECTS BY PRACTICE');
+  L.push(SEP);
+  L.push('');
+  var pracList = Object.keys(d.practices).sort(function(a,b){ return d.practices[b]-d.practices[a]; });
+  pracList.forEach(function(p){
+    var cnt = d.practices[p];
+    var pct = d.total ? Math.round((cnt/d.total)*100) : 0;
+    L.push('  • ' + padR(p, 32) + padL(cnt + ' projects', 12) + '  (' + pct + '%)');
+  });
+  L.push('');
+
+  // DM breakdown
+  L.push(SEP);
+  L.push('👤  PROJECTS BY DELIVERY MANAGER');
+  L.push(SEP);
+  L.push('');
+  var dmList = Object.keys(d.dms).sort(function(a,b){ return d.dms[b]-d.dms[a]; });
+  dmList.forEach(function(dm){
+    L.push('  • ' + padR(dm, 32) + padL(d.dms[dm] + ' projects', 12));
+  });
+  L.push('');
+
+  // Red / At-risk
+  if(d.reds.length > 0) {
+    L.push(SEP);
+    L.push('🚨  RED / AT-RISK PROJECTS  (' + d.reds.length + ')');
+    L.push(SEP);
+    L.push('');
+    d.reds.forEach(function(p){
+      var flags = [];
+      if(p.status === 'Red') flags.push('Red Status');
+      if(p.atRisk)           flags.push('At Risk');
+      L.push('  • ' + p.name + (p.account ? ' (' + p.account + ')' : '') + ' — ' + flags.join(', '));
+    });
+    L.push('');
+  }
+
+  // Footer
+  L.push(SEP);
+  L.push('🔗 Live Dashboard: https://gdc-project-compliance-dashboard.onrender.com');
+  L.push('📌 Data sourced from Salesforce PSA · Generated ' + d.date);
+  L.push(SEP);
+
+  return L.join('\n');
+}
+</script>
+</body>
+</html>

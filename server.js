@@ -513,6 +513,136 @@ function handleDebugMilestones(res) {
   });
 }
 
+// ── /api/canvas-data — compute all KPI numbers server-side for canvas export ─
+function handleCanvasData(res) {
+  if (!tokenCache.accessToken) {
+    res.writeHead(503, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'No SF token set.' }));
+    return;
+  }
+
+  var results = {};
+  var pending = 2;
+  var failed  = false;
+
+  function done(err, data) {
+    if (failed) return;
+    if (err) {
+      failed = true;
+      res.writeHead(502, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: err.message }));
+      return;
+    }
+    (data.records || []).forEach(function(r) { results[r.Id] = r; });
+    pending--;
+    if (pending !== 0) return;
+
+    var projects = Object.keys(results).map(function(k) { return results[k]; });
+    var today = new Date();
+
+    function pad(n){ return n<10?'0'+n:''+n; }
+    function parseDate(s){
+      if(!s) return null;
+      var p=s.split('-'); if(p.length!==3) return null;
+      return new Date(Date.UTC(+p[0],+p[1]-1,+p[2]));
+    }
+    function daysDiff(a,b){ return Math.floor((a-b)/(1000*60*60*24)); }
+
+    function isInternal(p) {
+      var badStages=['completed','cancelled','canceled','on hold','closed','delivery complete'];
+      if(badStages.indexOf((p.pse__Stage__c||'').toLowerCase())!==-1) return true;
+      var prac=(p.pse__Practice__r&&p.pse__Practice__r.Name)?p.pse__Practice__r.Name.toLowerCase():'';
+      if(prac==='internal') return true;
+      var cat=(p.psa_pm_Project_Category__c||'').toLowerCase();
+      return cat==='productive non - billable'||cat==='internal';
+    }
+    function hasRecentTimecard(p){
+      if(!p.psa_tm_Last_Time_Entry_Date__c) return false;
+      var d=parseDate(p.psa_tm_Last_Time_Entry_Date__c);
+      return d&&daysDiff(today,d)<=90;
+    }
+
+    // Active billable projects
+    var active = projects.filter(function(p){ return !isInternal(p) && hasRecentTimecard(p); });
+    var total  = active.length;
+    if (!total) { res.writeHead(200,{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}); res.end(JSON.stringify({total:0,kpis:[],practices:{},dms:{},reds:[]})); return; }
+
+    // KPI counts
+    function count(fn){ return active.filter(fn).length; }
+
+    var noStatus       = count(function(p){ return !p.pse__Project_Status__c; });
+    var missingReports = count(function(p){
+      if(!p.PSA_PM_Last_Project_Status_Report_Week__c) return true;
+      var d=parseDate(p.PSA_PM_Last_Project_Status_Report_Week__c); return d&&daysDiff(today,d)>14;
+    });
+    var redStatus      = count(function(p){ return p.pse__Project_Status__c==='Red'||p.psa_Overall_Project_Status_Trend__c==='Red'; });
+    var pastEnd        = count(function(p){ var d=parseDate(p.pse__End_Date__c); return d&&d<today; });
+    var lowMargin      = count(function(p){ return p.PSA_PM_Margin_Percent__c!==null&&p.PSA_PM_Margin_Percent__c!==undefined&&p.PSA_PM_Margin_Percent__c<50; });
+    var timecardLate   = count(function(p){
+      if(!p.psa_tm_Last_Time_Entry_Date__c) return true;
+      var d=parseDate(p.psa_tm_Last_Time_Entry_Date__c); return d&&daysDiff(today,d)>30;
+    });
+    var zeroHours      = count(function(p){ return !p.pse__Planned_Hours__c||p.pse__Planned_Hours__c===0; });
+    var overBudget     = count(function(p){ return p.PSA_PM_Total_Billable_Hours_Remaining__c!==null&&p.PSA_PM_Total_Billable_Hours_Remaining__c<0; });
+    var missingCSAT    = count(function(p){
+      var surveys=p.Customer_Surveys__r&&p.Customer_Surveys__r.records;
+      if(!surveys||!surveys.length) return true;
+      var sent=surveys[0].psa_pm_Survey_Sent_Date__c;
+      if(!sent) return true;
+      var d=parseDate(sent); return d&&daysDiff(today,d)>90;
+    });
+    var missingAE      = count(function(p){
+      var aes=p.Adoption_Events__r&&p.Adoption_Events__r.records;
+      if(aes&&aes.length) return false;
+      return !p.PSA_Adoption_Event_Not_Required_Reason__c;
+    });
+
+    function pct(compliant,tot){ return tot?Math.round((compliant/tot)*100):0; }
+
+    var kpis = [
+      { label:'Status Updated',         compliant:total-noStatus,       total:total, pct:pct(total-noStatus,total),       icon:'📋' },
+      { label:'Status Reports Filed',   compliant:total-missingReports, total:total, pct:pct(total-missingReports,total), icon:'📄' },
+      { label:'Not Red Status',         compliant:total-redStatus,      total:total, pct:pct(total-redStatus,total),      icon:'🔴' },
+      { label:'Within End Date',        compliant:total-pastEnd,        total:total, pct:pct(total-pastEnd,total),        icon:'📅' },
+      { label:'Healthy Margin (≥50%)',  compliant:total-lowMargin,      total:total, pct:pct(total-lowMargin,total),      icon:'💰' },
+      { label:'Timecard Up to Date',    compliant:total-timecardLate,   total:total, pct:pct(total-timecardLate,total),   icon:'🕐' },
+      { label:'Planned Hours Entered',  compliant:total-zeroHours,      total:total, pct:pct(total-zeroHours,total),      icon:'⏱️' },
+      { label:'Hours Within Budget',    compliant:total-overBudget,     total:total, pct:pct(total-overBudget,total),     icon:'⚠️' },
+      { label:'CSAT Survey Sent',       compliant:total-missingCSAT,    total:total, pct:pct(total-missingCSAT,total),    icon:'⭐' },
+      { label:'Adoption Events Covered',compliant:total-missingAE,      total:total, pct:pct(total-missingAE,total),     icon:'🎯' },
+    ];
+
+    // Practice breakdown
+    var practices = {};
+    active.forEach(function(p){
+      var prac=(p.pse__Practice__r&&p.pse__Practice__r.Name)||'Unassigned';
+      practices[prac]=(practices[prac]||0)+1;
+    });
+
+    // DM breakdown
+    var dms = {};
+    active.forEach(function(p){
+      var dm=(p.pse__Project_Manager__r&&p.pse__Project_Manager__r.Name)||(p.psa_pm_Portfolio_Manager__r&&p.psa_pm_Portfolio_Manager__r.Name)||'Unassigned';
+      dms[dm]=(dms[dm]||0)+1;
+    });
+
+    // Red/At-risk projects
+    var reds = active.filter(function(p){ return p.pse__Project_Status__c==='Red'||p.psa_pm_At_Risk__c; })
+      .map(function(p){ return { name:p.Name, account:(p.pse__Account__r&&p.pse__Account__r.Name)||'', status:p.pse__Project_Status__c||'', atRisk:!!p.psa_pm_At_Risk__c }; });
+
+    // Ending in Oct 2026
+    var endingOct = count(function(p){ var d=parseDate(p.pse__End_Date__c); var oct=new Date(Date.UTC(2026,9,31,12,0,0)); return d&&d>=today&&d<=oct; });
+
+    var dateStr = today.toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'});
+
+    res.writeHead(200,{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'});
+    res.end(JSON.stringify({ date:dateStr, total:total, kpis:kpis, practices:practices, dms:dms, reds:reds, endingOct:endingOct }));
+  }
+
+  fetchSOQL(SOQL_BY_PM, tokenCache.accessToken, tokenCache.instanceUrl, done);
+  fetchSOQL(SOQL_BY_DM, tokenCache.accessToken, tokenCache.instanceUrl, done);
+}
+
 // ── Static file serving from public/ ─────────────────────────────────────────
 function handleStatic(reqPath, res) {
   if (reqPath === '/' || reqPath === '') reqPath = '/index.html';
@@ -566,7 +696,9 @@ var server = http.createServer(function (req, res) {
     res.writeHead(405); res.end('Method Not Allowed'); return;
   }
 
-  if (reqPath === '/api/projects') {
+  if (reqPath === '/api/canvas-data') {
+    handleCanvasData(res);
+  } else if (reqPath === '/api/projects') {
     handleApiProjects(res);
   } else if (reqPath === '/api/milestones') {
     handleMilestones(res);
