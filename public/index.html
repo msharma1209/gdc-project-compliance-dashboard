@@ -141,6 +141,11 @@
   .kpi-card:hover { transform: translateY(-3px); box-shadow: 0 10px 32px rgba(1,118,211,0.14); }
   .kpi-card.placeholder-card { cursor: default; opacity: 0.6; }
   .kpi-card.placeholder-card:hover { transform: none; box-shadow: 0 4px 20px rgba(30,80,160,0.08); }
+  .kpi-card.coming-soon-card { cursor: default; opacity: 0.55; filter: grayscale(0.4); }
+  .kpi-card.coming-soon-card:hover { transform: none; box-shadow: 0 4px 20px rgba(30,80,160,0.08); }
+  .kpi-coming-soon-badge { display: inline-block; margin-top: 8px; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: #94a3b8; background: #f1f5f9; border: 1px dashed #cbd5e1; border-radius: 20px; padding: 3px 10px; }
+  .kpi-bar-row.coming-soon-row { opacity: 0.45; filter: grayscale(0.5); cursor: default; pointer-events: none; }
+  .kpi-bar-row.coming-soon-row .kpi-bar-pct { color: #94a3b8 !important; font-style: italic; font-size: 0.72rem; }
   .kpi-icon  { font-size: 1.4rem; margin-bottom: 8px; display: block; line-height: 1; }
   .kpi-label { font-size: 0.7rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; line-height: 1.3; }
   .kpi-value { font-size: 2rem; font-weight: 700; line-height: 1; color: var(--heading); }
@@ -680,11 +685,10 @@ var KPI_DEFS = [
   },
   { id:'milestones',       label:'Milestones Due (30d)',     icon:'🏁', border:'red',
     desc:'Billing milestones (RecordType=Billing, Status≠Complete) due in next 30 days — by Practice',
+    comingSoon: true,
     match: function(p) { return !isInternal(p) && hasBillableMilestoneDueSoon(p); },
     breakdown: true,
     getBreakdown: function(projects) {
-      // Count milestones (not projects) per practice, from the dedicated flat list
-      // This is the authoritative source — RecordType=Billing filtered at SOQL level
       var projectIds = {};
       projects.forEach(function(p) { projectIds[p.Id] = true; });
       var counts = {};
@@ -1199,11 +1203,16 @@ function renderKPIs() {
   var grid=document.getElementById('kpi-grid'); clearEl(grid);
   KPI_DEFS.forEach(function(kpi){
     var card=document.createElement('div');
-    card.className='kpi-card border-'+kpi.border+(kpi.placeholder?' placeholder-card':'');
+    var extraClass = kpi.comingSoon ? ' coming-soon-card' : (kpi.placeholder ? ' placeholder-card' : '');
+    card.className='kpi-card border-'+kpi.border+extraClass;
     var icon=document.createElement('span'); icon.className='kpi-icon'; icon.textContent=kpi.icon;
     var label=document.createElement('div'); label.className='kpi-label'; label.textContent=kpi.label;
 
-    if(kpi.breakdown){
+    if(kpi.comingSoon){
+      var val=document.createElement('div'); val.className='kpi-value'; val.style.color='#94a3b8'; val.textContent='—';
+      var badge=document.createElement('div'); badge.className='kpi-coming-soon-badge'; badge.textContent='🚧 Going Live Soon';
+      card.appendChild(icon); card.appendChild(label); card.appendChild(val); card.appendChild(badge);
+    } else if(kpi.breakdown){
       // ── Breakdown card: show per-category rows ──
       var activeProjects = state.filtered.filter(kpi.match);
       var rows = kpi.getBreakdown(activeProjects);
@@ -1295,6 +1304,27 @@ function renderKPISummary() {
   var infoIds = { total: true, adoption_upcoming: true, milestones: true, ending_oct: true };
 
   KPI_DEFS.forEach(function(kpi) {
+    var row = document.createElement('div');
+
+    // ── Coming Soon KPIs: grey out in summary bar list ──
+    if (kpi.comingSoon) {
+      row.className = 'kpi-bar-row coming-soon-row';
+      var topDiv = document.createElement('div'); topDiv.className = 'kpi-bar-top';
+      var nameDiv = document.createElement('div'); nameDiv.className = 'kpi-bar-name';
+      var iconSpan = document.createElement('span'); iconSpan.className = 'kpi-bar-icon'; iconSpan.textContent = kpi.icon;
+      var labelSpan = document.createElement('span'); labelSpan.className = 'kpi-bar-label'; labelSpan.textContent = (TABLE_NAMES[kpi.id] || kpi.label);
+      nameDiv.appendChild(iconSpan); nameDiv.appendChild(labelSpan);
+      var pctDiv = document.createElement('div'); pctDiv.className = 'kpi-bar-pct'; pctDiv.textContent = '🚧 Going Live Soon';
+      topDiv.appendChild(nameDiv); topDiv.appendChild(pctDiv);
+      row.appendChild(topDiv);
+      var track = document.createElement('div'); track.className = 'kpi-bar-track';
+      var fill = document.createElement('div'); fill.className = 'kpi-bar-fill';
+      fill.style.width = '0%'; fill.style.background = '#cbd5e1';
+      track.appendChild(fill); row.appendChild(track);
+      list.appendChild(row);
+      return;
+    }
+
     var flagged = state.filtered.filter(kpi.match).length;
     var pct;
 
@@ -1318,7 +1348,7 @@ function renderKPISummary() {
       fillColor = '#f87171'; textColor = '#f87171';
     }
 
-    var row = document.createElement('div'); row.className = 'kpi-bar-row';
+    row.className = 'kpi-bar-row';
 
     // Top: name left, % right
     var topDiv = document.createElement('div'); topDiv.className = 'kpi-bar-top';
