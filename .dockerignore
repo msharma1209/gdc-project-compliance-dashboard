@@ -1,0 +1,8 @@
+.git
+.env
+*.json
+!package.json
+*.py
+*.ps1
+render.yaml
+CLAUDE.md
