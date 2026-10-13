@@ -292,27 +292,6 @@
   .at-risk { color: var(--red); font-weight: 700; font-size: 0.72rem; }
   .dm-chip { display: flex; align-items: center; gap: 5px; white-space: nowrap; font-size: 0.78rem; }
 
-  /* ── Row expand toggle ── */
-  .expand-btn { background: none; border: none; cursor: pointer; color: var(--muted); font-size: 0.75rem; padding: 2px 4px; border-radius: 4px; transition: color 0.12s, background 0.12s; line-height: 1; }
-  .expand-btn:hover { color: var(--blue); background: rgba(1,118,211,0.08); }
-  .td-expand { width: 28px; padding: 0 4px 0 8px !important; }
-  /* Expanded detail card */
-  .expand-row td { padding: 0 !important; border-bottom: 2px solid rgba(1,118,211,0.15) !important; }
-  .expand-card {
-    background: linear-gradient(135deg,#f0f6ff 0%,#f8fbff 100%);
-    border-left: 3px solid var(--blue);
-    padding: 16px 20px 14px;
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 10px 20px;
-  }
-  .expand-field { display: flex; flex-direction: column; gap: 2px; }
-  .expand-label { font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); }
-  .expand-value { font-size: 0.82rem; color: var(--text); word-break: break-word; }
-  .expand-value a { color: var(--blue); }
-  .expand-value.red-val   { color: #ef4444; font-weight: 600; }
-  .expand-value.green-val { color: #16a34a; font-weight: 600; }
-  .expand-value.amber-val { color: #f59e0b; font-weight: 600; }
   .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid rgba(1,118,211,0.2); border-top-color: var(--blue); border-radius: 50%; animation: spin 0.6s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .empty-row td { text-align: center; padding: 40px; color: var(--muted); font-size: 0.85rem; }
@@ -870,7 +849,6 @@ function rowAlertClass(p){
 /* ── COLUMNS ── */
 // Same 13 columns used on both main dashboard and all KPI drill-down pages
 var SHARED_COLUMNS = [
-  {key:'_expand',      label:'',                    sortable:false },
   {key:'name',         label:'Project Name',        sortable:true },
   {key:'pm',           label:'Project Manager',     sortable:true },
   {key:'region',       label:'Region',              sortable:true },
@@ -920,108 +898,16 @@ function getSortVal(p, col) {
   }
 }
 
-/* ── BUILD EXPAND SUB-ROW ── */
-function buildExpandRow(p, colSpan) {
-  var tr=document.createElement('tr'); tr.className='expand-row';
-  var td=document.createElement('td'); td.colSpan=colSpan;
-  var card=document.createElement('div'); card.className='expand-card';
-
-  function field(label, value, cssClass) {
-    var wrap=document.createElement('div'); wrap.className='expand-field';
-    var lbl=document.createElement('span'); lbl.className='expand-label'; lbl.textContent=label;
-    var val=document.createElement('span'); val.className='expand-value'+(cssClass?' '+cssClass:'');
-    if(typeof value==='string'||typeof value==='number') { val.textContent=value||'—'; }
-    else if(value && value.nodeType) { val.appendChild(value); }
-    else { val.textContent='—'; }
-    wrap.appendChild(lbl); wrap.appendChild(val);
-    card.appendChild(wrap);
-  }
-
-  // Full project name as link
-  var nmLink=document.createElement('a');
-  nmLink.href=SF_INSTANCE+'/lightning/r/pse__Proj__c/'+p.Id+'/view';
-  nmLink.target='_blank'; nmLink.rel='noopener noreferrer';
-  nmLink.textContent=p.Name||'—';
-  field('Project Name (Full)', nmLink);
-
-  var accN=(p.pse__Account__r&&p.pse__Account__r.Name)?p.pse__Account__r.Name:'—';
-  field('Account', accN);
-
-  var pmN=(p.pse__Project_Manager__r&&p.pse__Project_Manager__r.Name)?p.pse__Project_Manager__r.Name:'—';
-  field('Project Manager', pmN);
-
-  var pracN=(p.pse__Practice__r&&p.pse__Practice__r.Name)?p.pse__Practice__r.Name:'—';
-  field('Practice', pracN);
-
-  var regN=(p.pse__Region__r&&p.pse__Region__r.Name)?p.pse__Region__r.Name:'—';
-  field('Region', regN);
-
-  field('Status', p.pse__Project_Status__c||'Not Set', (!p.pse__Project_Status__c?'red-val':p.pse__Project_Status__c==='Red'?'red-val':p.pse__Project_Status__c==='Green'?'green-val':p.pse__Project_Status__c==='Yellow'?'amber-val':''));
-  field('Stage', p.pse__Stage__c||'—');
-  field('Billing Type', p.pse__Billing_Type__c||'—');
-
-  var edD=parseDate(p.pse__End_Date__c);
-  field('End Date', fmtDate(p.pse__End_Date__c), (edD&&edD<TODAY?'red-val':''));
-
-  var mVal=p.PSA_PM_Margin_Percent__c;
-  field('Margin %', mVal!=null?Number(mVal).toFixed(1)+'%':'—', mVal!=null?(mVal<50?'red-val':mVal<75?'amber-val':'green-val'):'');
-
-  var phV=p.pse__Planned_Hours__c;
-  field('Planned Hours', phV!=null&&phV>0?fmtNum(phV):'—', (phV==null||phV===0?'red-val':''));
-
-  var tcD=p.psa_tm_Last_Time_Entry_Date__c?parseDate(p.psa_tm_Last_Time_Entry_Date__c):null;
-  field('Last Timecard', fmtDate(p.psa_tm_Last_Time_Entry_Date__c)||'Never', (!p.psa_tm_Last_Time_Entry_Date__c||(tcD&&daysDiff(TODAY,tcD)>30))?'red-val':'');
-
-  var csD=p._lastCSAT?parseDate(p._lastCSAT):null;
-  field('Last CSAT Sent', fmtDate(p._lastCSAT)||'Never', (!p._lastCSAT||(csD&&daysDiff(TODAY,csD)>90))?'red-val':'');
-
-  var lrD=p._lastStatusReport?parseDate(p._lastStatusReport):null;
-  field('Last Status Report', fmtDate(p._lastStatusReport)||'Never', (!p._lastStatusReport||(lrD&&daysDiff(TODAY,lrD)>14))?'red-val':'');
-
-  var aeDates=(p._forecastedAEDates&&p._forecastedAEDates.length)?p._forecastedAEDates.map(function(d){ return fmtDate(d); }).join(', '):'—';
-  field('Forecasted AE Dates', aeDates);
-
-  var arV=p.PSA_Adoption_Event_Not_Required_Reason__c;
-  field('Adoption Not Required Reason', arV||'—');
-
-  field('% Complete', p.psa_pm_PercentComplete__c!=null?Number(p.psa_pm_PercentComplete__c).toFixed(0)+'%':'—');
-  field('Remaining Hours', p.pse__Scheduled_Hours_Remaining__c!=null?fmtNum(p.pse__Scheduled_Hours_Remaining__c):'—');
-  field('At Risk', p.psa_pm_At_Risk__c?'Yes':'No', p.psa_pm_At_Risk__c?'red-val':'');
-
-  td.appendChild(card); tr.appendChild(td);
-  return tr;
-}
-
 /* ── BUILD ROW (used on both main table and all KPI drill-down pages — 13 columns) ── */
 function buildDetailRow(p) {
   var tr=document.createElement('tr'); tr.setAttribute('data-id',p.Id);
 
-  // 0. Expand toggle
-  var tdExp=document.createElement('td'); tdExp.className='td-expand';
-  var expBtn=document.createElement('button'); expBtn.className='expand-btn';
-  expBtn.textContent='▶'; expBtn.title='Expand row';
-  var expanded=false;
-  var expandRow=null;
-  expBtn.addEventListener('click', function(e){
-    e.stopPropagation();
-    expanded=!expanded;
-    expBtn.textContent=expanded?'▼':'▶';
-    expBtn.title=expanded?'Collapse row':'Expand row';
-    if(expanded){
-      expandRow=buildExpandRow(p, SHARED_COLUMNS.length);
-      tr.parentNode.insertBefore(expandRow, tr.nextSibling);
-    } else {
-      if(expandRow&&expandRow.parentNode){ expandRow.parentNode.removeChild(expandRow); expandRow=null; }
-    }
-  });
-  tdExp.appendChild(expBtn); tr.appendChild(tdExp);
-
-  // 1. Project Name (link to SF) — full text, no truncation; column is resizable
-  var tdN=document.createElement('td');
+  // 1. Project Name (link to SF)
+  var tdN=document.createElement('td'); tdN.style.maxWidth='260px';
   var lnk=document.createElement('a');
   lnk.href=SF_INSTANCE+'/lightning/r/pse__Proj__c/'+p.Id+'/view';
   lnk.target='_blank'; lnk.rel='noopener noreferrer';
-  var nm=p.Name||'—'; lnk.textContent=nm; lnk.title=nm;
+  var nm=p.Name||'—'; lnk.textContent=nm.length>48?nm.slice(0,46)+'…':nm; lnk.title=nm;
   tdN.appendChild(lnk); tr.appendChild(tdN);
 
   // 2. Project Manager (with DM colour dot — same person in this data model)
@@ -1161,7 +1047,6 @@ function buildMainRow(p) { return buildDetailRow(p); }
 
 /* ── COLUMN DEFAULT WIDTHS (px) ── */
 var COL_WIDTHS = {
-  '_expand':      32,
   'name':        320,
   'pm':          140,
   'region':       90,
@@ -1232,7 +1117,7 @@ function makeResizeHandler(th, colKey) {
       th.style.minWidth = newW + 'px';
       // Update every td in that column
       if(table) {
-        Array.prototype.forEach.call(table.querySelectorAll('tbody tr:not(.expand-row)'), function(row){
+        Array.prototype.forEach.call(table.querySelectorAll('tbody tr'), function(row){
           var cell = row.children[colIdx];
           if(cell) { cell.style.width = newW + 'px'; cell.style.maxWidth = newW + 'px'; }
         });
