@@ -252,10 +252,20 @@
   #search-box:focus, #detail-search-box:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(1,118,211,0.1); }
   #row-count, #detail-row-count { font-size: 0.78rem; color: var(--muted); margin-left: auto; }
   .table-wrap { overflow-x: auto; border-radius: 18px; border: none; box-shadow: 0 4px 24px rgba(30,80,160,0.08), 0 1px 4px rgba(30,80,160,0.04); background: rgba(255,255,255,0.86); backdrop-filter: blur(8px); }
-  table { width: 100%; border-collapse: collapse; min-width: 1500px; }
+  table { width: max-content; min-width: 100%; border-collapse: collapse; table-layout: fixed; }
   thead tr { background: rgba(240,246,255,0.9); border-bottom: 1px solid rgba(200,215,240,0.5); }
-  th { padding: 11px 12px; text-align: left; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); white-space: nowrap; cursor: pointer; user-select: none; transition: color 0.15s; }
+  th { padding: 11px 12px; text-align: left; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); white-space: nowrap; cursor: pointer; user-select: none; transition: color 0.15s; position: relative; overflow: hidden; }
   th:hover { color: var(--heading); }
+  /* Column resize handle */
+  .col-resize-handle {
+    position: absolute; right: 0; top: 0; bottom: 0; width: 5px;
+    cursor: col-resize; background: transparent;
+    transition: background 0.15s;
+    z-index: 1;
+  }
+  .col-resize-handle:hover, .col-resize-handle.dragging { background: rgba(1,118,211,0.35); }
+  /* Cells — nowrap, clip overflow, fixed width from th */
+  td { padding: 10px 12px; font-size: 0.8rem; vertical-align: middle; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   th .sort-icon { margin-left: 4px; opacity: 0.4; font-style: normal; font-size: 0.7rem; }
   th.sort-asc .sort-icon, th.sort-desc .sort-icon { opacity: 1; color: var(--blue); }
   tbody tr { border-bottom: 1px solid rgba(200,215,240,0.35); transition: background 0.1s; }
@@ -1003,12 +1013,12 @@ function buildDetailRow(p) {
   });
   tdExp.appendChild(expBtn); tr.appendChild(tdExp);
 
-  // 1. Project Name (link to SF)
-  var tdN=document.createElement('td'); tdN.style.maxWidth='260px';
+  // 1. Project Name (link to SF) — full text, no truncation; column is resizable
+  var tdN=document.createElement('td');
   var lnk=document.createElement('a');
   lnk.href=SF_INSTANCE+'/lightning/r/pse__Proj__c/'+p.Id+'/view';
   lnk.target='_blank'; lnk.rel='noopener noreferrer';
-  var nm=p.Name||'—'; lnk.textContent=nm.length>48?nm.slice(0,46)+'…':nm; lnk.title=nm;
+  var nm=p.Name||'—'; lnk.textContent=nm; lnk.title=nm;
   tdN.appendChild(lnk); tr.appendChild(tdN);
 
   // 2. Project Manager (with DM colour dot — same person in this data model)
@@ -1146,15 +1156,43 @@ function buildDetailRow(p) {
 }
 function buildMainRow(p) { return buildDetailRow(p); }
 
+/* ── COLUMN DEFAULT WIDTHS (px) ── */
+var COL_WIDTHS = {
+  '_expand':      32,
+  'name':        320,
+  'pm':          140,
+  'region':       90,
+  'practice':    160,
+  'status':       90,
+  'stage':       110,
+  'enddate':     100,
+  'billing':     110,
+  'margin':       80,
+  'planned_hrs':  90,
+  'timecard':    110,
+  'csat':        120,
+  'ae_forecast': 130,
+  'adoption_exc':140,
+  'last_report': 130
+};
+
 /* ── GENERIC TABLE HEADER BUILDER ── */
 function buildTableHeader(trEl, columns, sortCol, sortDir, onSort) {
   clearEl(trEl);
   columns.forEach(function(col){
+    var w = COL_WIDTHS[col.key] || 110;
     var th=document.createElement('th');
+    th.style.width = w + 'px';
+    th.style.minWidth = w + 'px';
+    th.setAttribute('data-col-key', col.key);
     if(col.sortable){
       th.setAttribute('data-col',col.key);
       if(sortCol===col.key) th.className='sort-'+sortDir;
-      th.addEventListener('click',function(){ onSort(col.key); });
+      th.addEventListener('click',function(e){
+        // don't sort if click landed on the resize handle
+        if(e.target.classList.contains('col-resize-handle')) return;
+        onSort(col.key);
+      });
     }
     var lbl=document.createElement('span'); lbl.textContent=col.label; th.appendChild(lbl);
     if(col.sortable){
@@ -1162,8 +1200,49 @@ function buildTableHeader(trEl, columns, sortCol, sortDir, onSort) {
       si.textContent=(sortCol===col.key)?(sortDir==='asc'?'▲':'▼'):'⇅';
       th.appendChild(si);
     }
+    // Resize handle on every column except the expand toggle
+    if(col.key !== '_expand'){
+      var handle=document.createElement('div'); handle.className='col-resize-handle';
+      handle.addEventListener('mousedown', makeResizeHandler(th, col.key));
+      th.appendChild(handle);
+    }
     trEl.appendChild(th);
   });
+}
+
+/* ── COLUMN RESIZE ENGINE ── */
+function makeResizeHandler(th, colKey) {
+  return function(e) {
+    e.preventDefault(); e.stopPropagation();
+    var handle = e.target;
+    handle.classList.add('dragging');
+    var startX = e.clientX;
+    var startW = th.offsetWidth;
+    // Find all tds in same column position across the table
+    var table = th.closest('table');
+    var colIdx = Array.prototype.indexOf.call(th.parentNode.children, th);
+
+    function onMove(ev) {
+      var newW = Math.max(60, startW + (ev.clientX - startX));
+      COL_WIDTHS[colKey] = newW;
+      th.style.width = newW + 'px';
+      th.style.minWidth = newW + 'px';
+      // Update every td in that column
+      if(table) {
+        Array.prototype.forEach.call(table.querySelectorAll('tbody tr:not(.expand-row)'), function(row){
+          var cell = row.children[colIdx];
+          if(cell) { cell.style.width = newW + 'px'; cell.style.maxWidth = newW + 'px'; }
+        });
+      }
+    }
+    function onUp() {
+      handle.classList.remove('dragging');
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  };
 }
 
 /* ── GENERIC TABLE BODY BUILDER ── */
