@@ -251,6 +251,8 @@
   }
   #search-box:focus, #detail-search-box:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(1,118,211,0.1); }
   #row-count, #detail-row-count { font-size: 0.78rem; color: var(--muted); margin-left: auto; }
+  #export-btn { display: inline-flex; align-items: center; gap: 5px; background: #fff; color: var(--green); border: 1px solid rgba(22,163,74,0.4); border-radius: 24px; padding: 5px 14px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: background 0.15s, border-color 0.15s; white-space: nowrap; font-family: inherit; }
+  #export-btn:hover { background: rgba(22,163,74,0.06); border-color: var(--green); }
   .table-wrap { overflow-x: auto; border-radius: 18px; border: none; box-shadow: 0 4px 24px rgba(30,80,160,0.08), 0 1px 4px rgba(30,80,160,0.04); background: rgba(255,255,255,0.86); backdrop-filter: blur(8px); }
   table { width: max-content; min-width: 100%; border-collapse: collapse; table-layout: fixed; }
   thead tr { background: rgba(240,246,255,0.9); border-bottom: 1px solid rgba(200,215,240,0.5); }
@@ -479,6 +481,7 @@
       <div id="table-controls">
         <input id="search-box" type="text" placeholder="Search project, account, DM..." autocomplete="off">
         <span id="row-count"></span>
+        <button id="export-btn" onclick="exportCSV()" title="Export current list to CSV / Excel">⬇ Export CSV</button>
       </div>
       <div class="table-wrap">
         <table id="project-table">
@@ -1311,6 +1314,69 @@ function applyDetailSearch() {
     var dm=(p.pse__Project_Manager__r&&p.pse__Project_Manager__r.Name)?p.pse__Project_Manager__r.Name:'';
     return (p.Name||'').toLowerCase().indexOf(q)!==-1||acc.toLowerCase().indexOf(q)!==-1||dm.toLowerCase().indexOf(q)!==-1;
   });
+}
+
+/* ── EXPORT CSV ── */
+function exportCSV() {
+  var rows = state.displayed;
+  if (!rows || !rows.length) { alert('No projects to export.'); return; }
+
+  var headers = [
+    'Project Name', 'Account', 'Project Manager', 'Practice', 'Region',
+    'Stage', 'Status', 'Status Trend', 'Billing Type', 'End Date',
+    'Margin %', 'Planned Hours', 'Remaining Hours', '% Complete',
+    'Last Timecard', 'Last Status Report', 'Last CSAT Sent',
+    'Forecasted AE Dates', 'Adoption Not Required Reason', 'At Risk'
+  ];
+
+  function esc(v) {
+    var s = (v === null || v === undefined) ? '' : String(v);
+    // wrap in quotes if contains comma, quote, or newline
+    if (s.indexOf(',') !== -1 || s.indexOf('"') !== -1 || s.indexOf('\n') !== -1) {
+      return '"' + s.replace(/"/g, '""') + '"';
+    }
+    return s;
+  }
+
+  var lines = [headers.map(esc).join(',')];
+
+  rows.forEach(function(p) {
+    var aeDates = (p._forecastedAEDates && p._forecastedAEDates.length)
+      ? p._forecastedAEDates.map(function(d){ return fmtDate(d); }).join('; ')
+      : '';
+    var line = [
+      p.Name || '',
+      (p.pse__Account__r && p.pse__Account__r.Name) || '',
+      (p.pse__Project_Manager__r && p.pse__Project_Manager__r.Name) || '',
+      (p.pse__Practice__r && p.pse__Practice__r.Name) || '',
+      (p.pse__Region__r && p.pse__Region__r.Name) || '',
+      p.pse__Stage__c || '',
+      p.pse__Project_Status__c || '',
+      p.psa_Overall_Project_Status_Trend__c || '',
+      p.pse__Billing_Type__c || '',
+      fmtDate(p.pse__End_Date__c) || '',
+      p.PSA_PM_Margin_Percent__c != null ? Number(p.PSA_PM_Margin_Percent__c).toFixed(1) : '',
+      p.pse__Planned_Hours__c != null ? p.pse__Planned_Hours__c : '',
+      p.pse__Scheduled_Hours_Remaining__c != null ? p.pse__Scheduled_Hours_Remaining__c : '',
+      p.psa_pm_PercentComplete__c != null ? Number(p.psa_pm_PercentComplete__c).toFixed(0) : '',
+      fmtDate(p.psa_tm_Last_Time_Entry_Date__c) || '',
+      fmtDate(p._lastStatusReport) || '',
+      fmtDate(p._lastCSAT) || '',
+      aeDates,
+      p.PSA_Adoption_Event_Not_Required_Reason__c || '',
+      p.psa_pm_At_Risk__c ? 'Yes' : 'No'
+    ].map(esc).join(',');
+    lines.push(line);
+  });
+
+  var csv = lines.join('\r\n');
+  var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  var ts   = new Date().toISOString().slice(0,10);
+  a.href = url; a.download = 'GDC-Projects-' + ts + '.csv';
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
 }
 
 function showMainView() {
